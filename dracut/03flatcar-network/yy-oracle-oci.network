@@ -1,0 +1,11 @@
+[Match]
+KernelCommandLine=flatcar.oem.id=oracle-oci
+
+[Network]
+DHCP=yes
+
+[DHCP]
+UseMTU=true
+UseDomains=true
+# Root is on iSCSI
+CriticalConnection=true
