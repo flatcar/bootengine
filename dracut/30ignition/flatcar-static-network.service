@@ -1,5 +1,5 @@
 [Unit]
-Description=CoreOS Static Network Agent
+Description=Flatcar Static Network Agent
 DefaultDependencies=false
 Before=initrd.target
 After=systemd-networkd.service initrd-root-fs.target
