@@ -1,5 +1,5 @@
 [Unit]
-Description=CoreOS DigitalOcean Network Agent
+Description=Flatcar DigitalOcean Network Agent
 DefaultDependencies=false
 Before=initrd.target
 After=systemd-networkd.service initrd-root-fs.target
