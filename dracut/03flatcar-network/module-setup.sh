@@ -45,7 +45,8 @@ install() {
     getent group systemd-resolve >> "$initdir/etc/group"
 
     # point /etc/resolv.conf @ systemd-resolved's resolv.conf
-    ln -s ../run/systemd/resolve/resolv.conf "$initdir/etc/resolv.conf"
+    #ln -s ../run/systemd/resolve/resolv.conf "$initdir/etc/resolv.conf"
+    echo "nameserver 8.8.8.8" > "$initdir/etc/resolv.conf"
 
     # the systemd-networkd dracut module enables networkd by default, but
     # we only want it when pulled in
