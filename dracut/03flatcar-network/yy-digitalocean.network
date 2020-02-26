@@ -1,0 +1,7 @@
+[Match]
+KernelCommandLine=flatcar.oem.id=digitalocean
+Name=e*
+
+[Network]
+DHCP=yes
+LinkLocalAddressing=yes
