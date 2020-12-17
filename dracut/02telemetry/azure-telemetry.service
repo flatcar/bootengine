@@ -1,0 +1,8 @@
+[Unit]
+Description=Azure Telemetry
+After=systemd-journal.socket
+Before=initrd-switch-root.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/capture-telemetry
