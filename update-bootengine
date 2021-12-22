@@ -34,7 +34,7 @@ DRACUT_ARGS=(
     --omit multipath
     --omit network
     --add iscsi
-    --add-drivers loop
+    --add-drivers "brd loop"
     )
 
 SETUP_MOUNTS=
