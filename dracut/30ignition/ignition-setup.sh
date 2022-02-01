@@ -21,12 +21,11 @@ pxe)
 esac
 
 dst=/usr/lib/ignition
-mkdir -p "${dst}"
-for name in base.ign default.ign; do
-    if [[ -e "${src}/base/${name}" ]]; then
-        cp "${src}/base/${name}" "${dst}"
-    fi
-done
+mkdir -p "${dst}/base.d"
+
+if [[ -e "${src}/base/base.ign" ]]; then
+        cp "${src}/base/base.ign" "${dst}/base.d/"
+fi
 if [[ -e "${src}/config.ign" ]]; then
     cp "${src}/config.ign" "${dst}/user.ign"
 fi
