@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Based on https://github.com/coreos/ignition/blob/02c1c638b51f5694d1d1d8305c09ff6dc3e4fa0e/examples/ignition-kargs-helper
+
+set -euxo pipefail
+
+# Handle PXE boots gracefully by not mounting any disk and instead error out early
+if [ "${OEM_ID}" = "pxe" ]; then
+  echo "error: can't set kargs for PXE boots" >&2
+  exit 1
+fi
+
+# Mount the OEM partition. Note that we mount but we don't unmount it because we
+# are run in a systemd unit with MountFlags=slave so it is unmounted for us.
+oemmnt=/mnt/oem_partition
+mkdir -p ${oemmnt}
+oemdev=/dev/disk/by-label/OEM
+mount -o rw ${oemdev} ${oemmnt}
+grubcfg="${oemmnt}/grub.cfg"
+
+# We do not handle all cases of conditional setup of linux_append or linux_console because we will not emulate the GRUB scripting logic.
+# Therefore, we only support the special lines 'set linux_append="($linux_append) ..."' which must not be starting with whitespace and should not be surrounded by an if-block.
+# Any conditional setup before or afterwards or the values of linux_console are not considered.
+orig_kernelopts="$({ grep -o '^set linux_append="[^"]*' $grubcfg || true ; } | sed 's,^set linux_append=",,' | sed 's,$linux_append,,' | tr '\n' ' ' | sed -e 's,^[[:space:]]*,,' -e 's,[[:space:]]*$,,')"
+# add leading and trailing whitespace to allow for easy sed replacements
+kernelopts=" $orig_kernelopts "
+
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+
+    case $key in
+    --should-exist)
+        arg="$2"
+        # don't repeat the arg
+        if [[ ! "${kernelopts[*]}" =~ " ${arg} " ]]; then
+            kernelopts="$kernelopts$arg "
+        fi
+        shift 2
+        ;;
+    --should-not-exist)
+        kernelopts="$(echo "$kernelopts" | sed "s| $2 | |g")"
+        shift 2
+        ;;
+    *)
+        echo "Unknown option"
+        exit 1
+        ;;
+    esac
+done
+
+# trim the leading and trailing whitespace
+kernelopts="$(echo "$kernelopts" | sed -e 's,^[[:space:]]*,,' -e 's,[[:space:]]*$,,')"
+
+# only apply the changes & reboot if changes have been made
+if [[ "$kernelopts" != "$orig_kernelopts" ]]; then
+    # Remove all existing definitions
+    sed -i 's,^set linux_append=".*",,' $grubcfg
+    # write out a single one to replace them
+    echo "set linux_append=\"\$linux_append $kernelopts\"" >> $grubcfg
+
+    # set the first-boot flag file to make sure Ignition runs again on the next boot (e.g., when a manual first boot was forced in the GRUB menu)
+    bootmnt=/mnt/boot_partition
+    mkdir -p ${bootmnt}
+    bootdev=/dev/disk/by-label/EFI-SYSTEM
+    mount -o rw ${bootdev} ${bootmnt}
+    echo > "${bootmnt}/flatcar/first_boot"
+
+    systemctl reboot --force
+fi

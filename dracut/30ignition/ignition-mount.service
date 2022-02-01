@@ -1,0 +1,39 @@
+[Unit]
+Description=Ignition (mount)
+Documentation=https://github.com/coreos/ignition
+ConditionPathExists=/etc/initrd-release
+DefaultDependencies=false
+Before=ignition-complete.target
+
+# Stage order: fetch-offline [-> fetch] [-> kargs] -> disks -> mount -> files.
+# We need to make sure the partitions and filesystems are set up before
+# mounting. This is also guaranteed through After=initrd-root-fs.target but
+# just to be explicit.
+After=ignition-disks.service
+Before=ignition-files.service
+
+# Make sure ExecStop= runs before we switch root
+Before=initrd-switch-root.target
+
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
+# Make sure the final /sysroot is ready first, since we're mounting under there
+Requires=initrd-root-fs.target
+After=initrd-root-fs.target
+
+# Make sure root filesystem is remounted read-write if needed
+After=ignition-remount-sysroot.service
+
+# Flatcar:
+Requires=initrd-setup-root.service
+After=initrd-setup-root.service
+Requires=ignition-setup.service
+After=ignition-setup.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/run/ignition.env
+ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=mount --log-to-stdout
+ExecStop=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=umount --log-to-stdout

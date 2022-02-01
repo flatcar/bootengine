@@ -1,30 +1,30 @@
 [Unit]
 Description=Ignition (files)
+Documentation=https://github.com/coreos/ignition
+ConditionPathExists=/etc/initrd-release
 DefaultDependencies=false
-Before=initrd-parse-etc.service
+Before=ignition-complete.target
 
+# Flatcar:
 Requires=initrd-root-fs.target
 After=initrd-root-fs.target
-
 Requires=ignition-setup.service ignition-disks.service
 After=ignition-setup.service ignition-disks.service
-
 # setup the root filesystem before we try do things like create users on it.
 Requires=initrd-setup-root.service
 After=initrd-setup-root.service
 
-# setup networking
-Wants=systemd-networkd.service
-After=systemd-networkd.service
-
-# generate resolv.conf
-Wants=systemd-resolved.service
-After=systemd-resolved.service
-
 OnFailure=emergency.target
 OnFailureJobMode=isolate
 
+# Stage order: fetch-offline [-> fetch] [-> kargs] -> disks -> mount -> files.
+After=ignition-mount.service
+
+# Run before initrd-parse-etc so that we can drop files it then picks up.
+Before=initrd-parse-etc.service
+
 [Service]
 Type=oneshot
+RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
-ExecStart=/usr/bin/ignition --root=/sysroot --oem=${OEM_ID} --stage=files
+ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=files --log-to-stdout
