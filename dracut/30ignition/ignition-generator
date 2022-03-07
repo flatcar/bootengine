@@ -4,6 +4,10 @@
 
 set -e
 
+# Generators don't have logging right now
+# https://github.com/systemd/systemd/issues/15638
+exec 1>/dev/kmsg; exec 2>&1
+
 UNIT_DIR="${1:-/tmp}"
 
 cmdline=( $(</proc/cmdline) )
@@ -26,8 +30,9 @@ cmdline_bool() {
 }
 
 add_requires() {
-    local name="$1"
-    local requires_dir="${UNIT_DIR}/initrd.target.requires"
+    local name="$1"; shift
+    local target="$1"; shift
+    local requires_dir="${UNIT_DIR}/${target}.requires"
     mkdir -p "${requires_dir}"
     ln -sf "../${name}" "${requires_dir}/${name}"
 }
@@ -41,17 +46,16 @@ add_wants() {
 
 
 # This can't be done with ConditionKernelCommandLine because that always
-# starts the unit's dependencies. We want to start networkd only on first
+# starts the unit's dependencies. We want to start networking only on first
 # boot.
 if $(cmdline_bool flatcar.first_boot 0) || $(cmdline_bool coreos.first_boot 0); then
-    add_requires ignition-disks.service
-    add_requires ignition-files.service
+    add_requires ignition-complete.target initrd.target
     # Only try to mount the ESP if GRUB detected a first_boot file
     if [[ $(cmdline_arg flatcar.first_boot) = "detected" ]] || [[ $(cmdline_arg coreos.first_boot) = "detected" ]]; then
-        add_requires ignition-quench.service
+        add_requires ignition-quench.service initrd.target
     fi
     if [[ $(cmdline_arg flatcar.oem.id) == "packet" ]] || [[ $(cmdline_arg coreos.oem.id) == "packet" ]]; then
-        add_requires flatcar-static-network.service
+        add_requires flatcar-static-network.service initrd.target
     fi
 
     # On EC2, shut down systemd-networkd if ignition fails so that the instance
@@ -71,6 +75,12 @@ EOF
     if [[ $(cmdline_arg flatcar.oem.id) == "openstack" ]] || [[ $(cmdline_arg coreos.oem.id) == "openstack" ]]; then
         add_wants flatcar-openstack-hostname.service
     fi
+else
+    # If we're doing a non-Ignition (subsequent) boot, then
+    # queue a different target.  This is necessary so that units
+    # like `ignition-ostree-mount-sysroot.service`
+    # can cleanly distinguish between the two.
+    add_requires ignition-subsequent.target initrd.target
 fi
 
 # Write ignition-setup.service customized for PXE/ISO or regular boot
@@ -81,8 +91,19 @@ if [[ -z "${usr}" && -f /usr.squashfs ]]; then
     # PXE-booted system, with or without persistent root
     # (see 10diskless-generator)
     pxe=1
+    # Workaround, "chmod" is not available
+    cp -a /bin/cat /bin/is-live-image
+    printf '#!/bin/sh\nexit 0\n' > /bin/is-live-image
 else
     nopxe=1
+    # Workaround, "chmod" is not available
+    cp -a /bin/cat /bin/is-live-image
+    printf '#!/bin/sh\nexit 1\n' > /bin/is-live-image
+    if $(cmdline_bool flatcar.first_boot 0) || $(cmdline_bool coreos.first_boot 0); then
+        add_requires ignition-diskful.target ignition-complete.target
+    else
+        add_requires ignition-diskful-subsequent.target ignition-subsequent.target
+    fi
 fi
 cat > ${UNIT_DIR}/ignition-setup.service <<EOF
 [Unit]
@@ -101,17 +122,18 @@ OnFailureJobMode=isolate
 
 [Service]
 Type=oneshot
+RemainAfterExit=yes
 ExecStart=/usr/sbin/ignition-setup ${nopxe:+normal} ${pxe:+pxe}
 EOF
 
 # Call the disk UUID randomizer whenever we're not PXE booting
 # The unit will check if it needs to act or not.
 if [ "${nopxe}" = 1 ]; then
-    add_requires "disk-uuid.service"
+    add_requires "disk-uuid.service" initrd.target
 fi
 
 if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]]; then
-    add_requires flatcar-digitalocean-network.service
+    add_requires flatcar-digitalocean-network.service initrd.target
 fi
 
 oem_id=pxe
@@ -124,4 +146,9 @@ if [[ "${oem_id}" = "${oem_cmdline}" ]]; then
     oem_cmdline="$(cmdline_arg coreos.oem.id ${oem_id})"
 fi
 
-echo "OEM_ID=${oem_cmdline}" > /run/ignition.env
+# Ignition changed the platform name to "aws"
+if [ "${oem_cmdline}" = "ec2" ]; then
+  oem_cmdline="aws"
+fi
+
+{ echo "OEM_ID=${oem_cmdline}" ; echo "PLATFORM_ID=${oem_cmdline}" ; } > /run/ignition.env
