@@ -151,4 +151,9 @@ if [ "${oem_cmdline}" = "ec2" ]; then
   oem_cmdline="aws"
 fi
 
+# Ignition changed the platform name to "gcp"
+if [ "${oem_cmdline}" = "gce" ]; then
+  oem_cmdline="gcp"
+fi
+
 { echo "OEM_ID=${oem_cmdline}" ; echo "PLATFORM_ID=${oem_cmdline}" ; } > /run/ignition.env
