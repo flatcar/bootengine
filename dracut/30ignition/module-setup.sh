@@ -130,4 +130,6 @@ install() {
         "/usr/bin/coreos-metadata"
     inst_script "$moddir/ignition-wrapper" \
         "/usr/bin/ignition"
+    inst_script "$moddir/setfiles-wrapper" \
+        "/usr/bin/setfiles"
 }
