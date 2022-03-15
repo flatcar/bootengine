@@ -34,7 +34,7 @@ DRACUT_ARGS=(
     --omit multipath
     --omit network
     --add iscsi
-    --add-drivers loop
+    --add-drivers "loop brd drbd nbd rbd xen-blkfront zram libarc4 lru_cache zsmalloc"
     )
 
 SETUP_MOUNTS=
