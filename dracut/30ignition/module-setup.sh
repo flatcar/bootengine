@@ -42,7 +42,8 @@ install() {
         userdel \
         usermod \
         wipefs \
-        cryptsetup
+        cryptsetup \
+        setfiles
 
     # Flatcar: add cloud_aws_ebs_nvme_id
     inst_script "$udevdir/cloud_aws_ebs_nvme_id" \
