@@ -8,6 +8,33 @@ Wants=systemd-networkd.service initrd-root-fs.target
 # Ensure Ignition can overwrite /etc/hostname
 Before=ignition-files.service
 
+# From coreos/afterburn:dracut/30afterburn/afterburn-hostname.service
+# (but with coreos.oem.id/flatcar.oem.id):
+# These platforms do not provide the hostname via DHCP
+# options, thus it needs to be fetched from the metadata
+# and statically applied on first-boot.
+ConditionKernelCommandLine=|coreos.oem.id=aliyun
+ConditionKernelCommandLine=|flatcar.oem.id=aliyun
+ConditionKernelCommandLine=|coreos.oem.id=azure
+ConditionKernelCommandLine=|flatcar.oem.id=azure
+ConditionKernelCommandLine=|coreos.oem.id=azurestack
+ConditionKernelCommandLine=|flatcar.oem.id=azurestack
+ConditionKernelCommandLine=|coreos.oem.id=digitalocean
+ConditionKernelCommandLine=|flatcar.oem.id=digitalocean
+ConditionKernelCommandLine=|coreos.oem.id=exoscale
+ConditionKernelCommandLine=|flatcar.oem.id=exoscale
+ConditionKernelCommandLine=|coreos.oem.id=ibmcloud
+ConditionKernelCommandLine=|flatcar.oem.id=ibmcloud
+ConditionKernelCommandLine=|coreos.oem.id=vultr
+ConditionKernelCommandLine=|flatcar.oem.id=vultr
+# Addition:
+ConditionKernelCommandLine=|coreos.oem.id=packet
+ConditionKernelCommandLine=|flatcar.oem.id=packet
+
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/coreos-metadata --cmdline --hostname=/sysroot/etc/hostname
+RemainAfterExit=yes

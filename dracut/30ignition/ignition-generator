@@ -69,9 +69,8 @@ Conflicts=emergency.service
 Conflicts=dracut-emergency.service
 EOF
     fi
-    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ec2" ]]; then
-        add_wants flatcar-metadata-hostname.service
-    fi
+    # Configure hostname from metadata through afterburn on platforms that don't set it via DHCP
+    add_wants flatcar-metadata-hostname.service
     if [[ $(cmdline_arg flatcar.oem.id) == "openstack" ]] || [[ $(cmdline_arg coreos.oem.id) == "openstack" ]]; then
         add_wants flatcar-openstack-hostname.service
     fi
