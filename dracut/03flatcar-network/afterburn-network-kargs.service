@@ -1,0 +1,22 @@
+[Unit]
+Description=Afterburn Initrd Setup Network Kernel Arguments
+Documentation=https://coreos.github.io/afterburn/usage/initrd-network-cmdline/
+
+# This service may produce additional kargs fragments,
+# which are then consumed by dracut-cmdline(8).
+DefaultDependencies=no
+Before=dracut-cmdline.service systemd-networkd.service
+PartOf=systemd-networkd.service
+# For extra safety
+ConditionKernelCommandLine=|coreos.oem.id=vmware
+ConditionKernelCommandLine=|flatcar.oem.id=vmware
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
+[Service]
+ExecStart=/usr/bin/coreos-metadata exp rd-network-kargs --cmdline --default-value ''
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=systemd-networkd.service
