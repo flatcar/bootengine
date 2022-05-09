@@ -135,7 +135,7 @@ if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg cor
     add_requires flatcar-digitalocean-network.service initrd.target
 fi
 
-oem_id=pxe
+oem_id=metal
 if [[ $(systemd-detect-virt || true) =~ ^(kvm|qemu)$ ]]; then
     oem_id=qemu
 fi
@@ -153,6 +153,11 @@ fi
 # Ignition changed the platform name to "gcp"
 if [ "${oem_cmdline}" = "gce" ]; then
   oem_cmdline="gcp"
+fi
+
+# To maintain compatibility with eventual legacy 'flatcar.oem.id=pxe'
+if [ "${oem_cmdline}" = "pxe" ]; then
+  oem_cmdline="metal"
 fi
 
 { echo "OEM_ID=${oem_cmdline}" ; echo "PLATFORM_ID=${oem_cmdline}" ; } > /run/ignition.env
