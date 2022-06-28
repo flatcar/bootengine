@@ -67,6 +67,9 @@ install() {
     # Required on system using SELinux
     inst_multiple -o setfiles
 
+    inst_script "$moddir/selinux-policy-persist" \
+        "/usr/sbin/selinux-policy-persist"
+
     inst_script "$moddir/ignition-kargs-helper" \
         "/usr/sbin/ignition-kargs-helper"
 

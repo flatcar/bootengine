@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Allows for auto-updating the SELinux base policy
+# while keeping the policy directory that's running
+# on the node read/write. e.g. allowing installation
+# of non-reboot-persistent custom SELinux modules.
+
+set -euxo pipefail
+
+# Remove pre-existing policies.
+rm /etc/selinux/mcs
+rm /var/lib/selinux
+
+# install policies from image. Making them read/write.
+cp -a /usr/lib/selinux/mcs /etc/selinux
+cp -a /usr/lib/selinux/policy /var/lib/selinux
+
+# Build and reload policy
+semodule -DB
