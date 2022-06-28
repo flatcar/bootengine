@@ -8,8 +8,8 @@
 set -euxo pipefail
 
 # Remove pre-existing policies.
-rm /etc/selinux/mcs
-rm /var/lib/selinux
+rm -rf /etc/selinux/mcs
+rm -rf /var/lib/selinux
 
 # install policies from image. Making them read/write.
 cp -a /usr/lib/selinux/mcs /etc/selinux
