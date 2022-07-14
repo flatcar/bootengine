@@ -18,6 +18,9 @@ oemdev=/dev/disk/by-label/OEM
 mount -o rw ${oemdev} ${oemmnt}
 grubcfg="${oemmnt}/grub.cfg"
 
+# Ensure that it exists before we read from it (needed for the generic Flatcar image), "touch" does not exist in initramfs
+true >> $grubcfg
+
 # We do not handle all cases of conditional setup of linux_append or linux_console because we will not emulate the GRUB scripting logic.
 # Therefore, we only support the special lines 'set linux_append="($linux_append) ..."' which must not be starting with whitespace and should not be surrounded by an if-block.
 # Any conditional setup before or afterwards or the values of linux_console are not considered.
