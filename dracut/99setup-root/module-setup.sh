@@ -7,12 +7,16 @@ depends() {
 }
 
 install() {
-    dracut_install grep ldconfig mountpoint systemd-tmpfiles flatcar-tmpfiles
+    dracut_install grep ldconfig mountpoint systemd-tmpfiles flatcar-tmpfiles realpath
 
     inst_script "${moddir}/initrd-setup-root" \
 	        "/sbin/initrd-setup-root"
+    inst_script "${moddir}/initrd-setup-root-after-ignition" \
+                "/sbin/initrd-setup-root-after-ignition"
 
     inst_simple "${moddir}/initrd-setup-root.service" \
         "${systemdsystemunitdir}/initrd-setup-root.service"
 
+    inst_simple "${moddir}/initrd-setup-root-after-ignition.service" \
+        "${systemdsystemunitdir}/initrd-setup-root-after-ignition.service"
 }

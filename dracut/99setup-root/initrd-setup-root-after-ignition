@@ -1,0 +1,82 @@
+#!/bin/bash
+set -euo pipefail
+
+# Manage sysext symlinks to select the active sysext image, and do OEM partition migrations
+# (An alternative to symlinks is to implement support for ".v directories" in systemd-sysext
+# that could contain multiple versions and the right one gets selected, here not the newest
+# but that matching the OS version. However, we would still need the migration logic and
+# would not be able to use the OEM partition as dynamically preferred storage.)
+VERSION=$(grep -m 1 "^VERSION=" /sysroot/usr/lib/os-release | cut -d = -f 2)
+
+# Not all OEM partitions have an oem-release file but we require it now
+OEMID=$({ grep -m 1 -o "^ID=.*" /sysroot/usr/share/oem/oem-release || true ; } | cut -d = -f 2)
+
+# The active-oem-OEMID file gets created by the update-engine postinst action if both old and new /usr partitions have a sysext
+if [ "${OEMID}" != "" ] && [ -e "/sysroot/usr/share/oem/sysext/active-oem-${OEMID}" ]; then
+  SYSEXT_OEM_PART="/usr/share/oem/sysext/oem-${OEMID}-${VERSION}.raw"
+  SYSEXT_ROOT_PART="/etc/flatcar/oem-sysext/oem-${OEMID}-${VERSION}.raw"
+  SYMLINK="/sysroot/etc/extensions/oem-${OEMID}.raw"
+  ACTIVE_OEM=""
+
+  if [ -e "/sysroot/${SYSEXT_OEM_PART}" ]; then
+    ACTIVE_OEM="${SYSEXT_OEM_PART}"
+  elif [ -e "/sysroot/${SYSEXT_ROOT_PART}" ]; then
+    if [ -L "${SYMLINK}" ]; then
+      # Move the inactive sysext to the root partition to free space on the OEM partition
+      PREV_SYSEXT="/"$(realpath -m --relative-base=/sysroot "${SYMLINK}" | sed 's#^/##')
+      echo "Found ${PREV_SYSEXT} for possible move" >&2
+      if [ "${PREV_SYSEXT}" != "" ] && [ -e "/sysroot/${PREV_SYSEXT}" ] && [[ "${PREV_SYSEXT}" != "/etc/flatcar/oem-sysext/"* ]]; then
+        mkdir -p /sysroot/etc/flatcar/oem-sysext/
+        echo "Moving ${PREV_SYSEXT}"
+        # If it was an unexpected symlink target that can't be moved, go on
+        mv "/sysroot/${PREV_SYSEXT}" /sysroot/etc/flatcar/oem-sysext/ || true
+      fi
+    fi
+    # Try to store the active sysext in the OEM partition if there is enough space, this helps to support clearing the root partition
+    mkdir -p /sysroot/usr/share/oem/sysext/
+    echo "Trying to move ${SYSEXT_ROOT_PART} to OEM partition" >&2
+    if mv "/sysroot/${SYSEXT_ROOT_PART}" /sysroot/usr/share/oem/sysext/; then
+      ACTIVE_OEM="${SYSEXT_OEM_PART}"
+    else
+      echo "That failed, keeping it on root partition" >&2
+      ACTIVE_OEM="${SYSEXT_ROOT_PART}"
+    fi
+  else
+    echo "Did not find ${SYSEXT_OEM_PART} nor ${SYSEXT_ROOT_PART}" >&2
+    # TODO: Try to download it as fallback (needs starting and waiting for the network target), or maybe just give up and place a warning somewhere (motd?)
+    # URL could be https://update.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/oem-${OEMID}.raw.XY
+  fi
+  if [ "${ACTIVE_OEM}" != "" ] && [ -e "/sysroot/${ACTIVE_OEM}" ]; then
+    mkdir -p "/sysroot/etc/extensions"
+    ln -fs "${ACTIVE_OEM}" "${SYMLINK}"
+  else
+    rm -f "${SYMLINK}"
+  fi
+
+  # Flag file created by the update-engine postinst action if both /usr partitions have a sysext and active-oem-OEMID didn't exist
+  if [ -e "/sysroot/usr/share/oem/sysext/migrate-oem-${OEMID}" ]; then
+    echo "Found migration flag, deleting known old OEM partition files" >&2
+    # TODO: For each OEMID, delete known old files under /usr/share/oem/ and /etc/
+    rm -f "/sysroot/usr/share/oem/sysext/migrate-oem-${OEMID}"
+  fi
+fi
+
+# Manage optional Flatcar extensions that are coupled to the OS version.
+# They are only stored on the root partition but not directly in /etc/extensions/ because there
+# can only be one file for the extension name (this could be covered by the ".v directory" proposal).
+# The enabled-sysext.conf file contains the names per line and supports comments,
+# update-engine uses this file to know which extensions to download.
+for NAME in $(grep -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf || true); do
+  ACTIVE_EXT="/etc/flatcar/sysext/flatcar-${NAME}-${VERSION}.raw"
+  if [ ! -e "/sysroot/${ACTIVE_EXT}" ]; then
+    echo "Did not find ${ACTIVE_EXT}" >&2
+    # TODO: download it as fallback and if that fails, place a warning somewhere
+    # URL could be https://update.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/flatcar-${NAME}.raw.XY
+  fi
+  if [ -e "/sysroot/${ACTIVE_EXT}" ]; then
+    mkdir -p "/sysroot/etc/extensions"
+    ln -fs "${ACTIVE_EXT}" "/sysroot/etc/extensions/flatcar-${NAME}.raw"
+  else
+    rm -f "/sysroot/etc/extensions/flatcar-${NAME}.raw"
+  fi
+done
