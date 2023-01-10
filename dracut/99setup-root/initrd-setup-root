@@ -2,6 +2,11 @@
 # -*- mode: shell-script; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
 # ex: ts=8 sw=4 sts=4 et filetype=sh
 
+# Safe to run also after an official first boot and we do this now
+# for consistency regardless if first_boot= is passed to create missing
+# files if needed and make it easier to debug. In fact, it was required
+# to use first_boot=1 with PXE to get a proper rootfs which is strange.
+
 # /etc/machine-id after a new image is created:
 COREOS_BLANK_MACHINE_ID="42000000000000000000000000000042"
 MACHINE_ID_FILE="/sysroot/etc/machine-id"

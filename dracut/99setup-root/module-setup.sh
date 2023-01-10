@@ -15,7 +15,4 @@ install() {
     inst_simple "${moddir}/initrd-setup-root.service" \
         "${systemdsystemunitdir}/initrd-setup-root.service"
 
-    mkdir -p "${systemdsystemunitdir}/initrd.target.wants"
-    ln_r "${systemdsystemunitdir}/initrd-setup-root.service" \
-        "${systemdsystemunitdir}/initrd.target.wants/initrd-setup-root.service"
 }
