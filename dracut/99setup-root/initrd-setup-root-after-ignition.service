@@ -1,0 +1,14 @@
+[Unit]
+Description=Root filesystem completion
+DefaultDependencies=no
+RequiresMountsFor=/sysroot/usr/ /sysroot/usr/share/oem/
+After=initrd-root-fs.target ignition-files.service
+Before=initrd-parse-etc.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/initrd-setup-root-after-ignition
+
+[Install]
+WantedBy=initrd.target

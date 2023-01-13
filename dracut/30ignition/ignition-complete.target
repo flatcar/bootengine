@@ -10,8 +10,8 @@ ConditionPathExists=/etc/initrd-release
 Before=initrd.target
 
 # Run the generic rootfs setup helpers
-Requires=initrd-setup-root.service
-After=initrd-setup-root.service
+Requires=initrd-setup-root.service initrd-setup-root-after-ignition.service
+After=initrd-setup-root.service initrd-setup-root-after-ignition.service
 
 # Make sure we stop all the units before switching root
 Conflicts=initrd-switch-root.target umount.target
