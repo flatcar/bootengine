@@ -35,7 +35,9 @@ cmdline_arg() {
 usr=$(cmdline_arg usr)
 usrfstype=$(cmdline_arg usrfstype auto)
 usrflags=$(cmdline_arg usrflags ro)
-if [[ "$(echo "${usrflags}" | grep -E '(^ro$|^ro,|,ro$|,ro,)')" != "" ]]; then
+if [[ "$(echo ",${usrflags}," | grep -v -F ',ro,')" != "" ]]; then
+  true # Don't set "norecovery" when mounting rw
+else
   usrflags="${usrflags},norecovery"
 fi
 
@@ -67,13 +69,14 @@ if [[ "${usr}" != /* ]]; then
   fi
   # Add "norecovery" to systemd-fstab-generator's unit and exit
   mount_usrflags=$(cmdline_arg mount.usrflags ro)
-  if [[ "$(echo "${mount_usrflags}" | grep -E '(^ro$|^ro,|,ro$|,ro,)')" != "" ]]; then
+  if [[ "$(echo ",${mount_usrflags}," | grep -v -F ',ro,')" != "" ]]; then
     # Don't set "norecovery" when mounting rw
     exit 0
   fi
   mount_usrflags="${mount_usrflags},norecovery"
-  mkdir -p "${UNIT_DIR}/sysroot-usr.mount.d"
-  cat >"${UNIT_DIR}/sysroot-usr.mount.d/10-norecovery.conf" <<EOF
+  # sysroot-usr.mount is a bind mount from /sysusr/usr
+  mkdir -p "${UNIT_DIR}/sysusr-usr.mount.d"
+  cat >"${UNIT_DIR}/sysusr-usr.mount.d/10-norecovery.conf" <<EOF
 [Mount]
 Options=${mount_usrflags}
 EOF
