@@ -63,7 +63,8 @@ esac
 
 # Only proceed if the source is a path.
 if [[ "${usr}" != /* ]]; then
-  if [[ -z "${usr}" && -f /usr.squashfs ]]; then
+  # Here "$usr" does not contain the values of "mount.usr", hence the extra check not found in diskless-generator/ignition-generator
+  if [[ -z "${usr}" && -z "$(cmdline_arg mount.usr)" && -f /usr.squashfs ]]; then
     # Don't set "norecovery" for squashfs
     exit 0
   fi
