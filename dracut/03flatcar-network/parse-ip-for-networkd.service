@@ -1,0 +1,18 @@
+[Unit]
+Description=Write systemd-networkd units from cmdline
+DefaultDependencies=false
+
+After=afterburn-network-kargs.service
+PartOf=systemd-networkd.service
+Before=systemd-networkd.service initrd-switch-root.target
+# Switching the root filesystem terminates all running services with binaries from the initramfs, we need to finish before that happens
+Conflicts=initrd-switch-root.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+Environment="APPLY=1"
+ExecStart=/lib/dracut/hooks/cmdline/99-parse-ip-for-networkd.sh
+
+[Install]
+WantedBy=systemd-networkd.service
