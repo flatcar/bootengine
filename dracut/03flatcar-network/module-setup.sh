@@ -10,8 +10,6 @@ depends() {
 
 # called by dracut
 install() {
-    inst_multiple coreos-metadata
-
     inst_multiple -o \
         $systemdutildir/systemd-resolved \
         $systemdsystemunitdir/systemd-resolved.service \
@@ -19,6 +17,9 @@ install() {
 
     inst_simple "$moddir/network-cleanup.service" \
         "$systemdsystemunitdir/network-cleanup.service"
+
+    inst_simple "$moddir/parse-ip-for-networkd.service" \
+        "$systemdsystemunitdir/parse-ip-for-networkd.service"
 
     inst_simple "$moddir/afterburn-network-kargs.service" \
         "$systemdsystemunitdir/afterburn-network-kargs.service"
@@ -61,5 +62,6 @@ install() {
     systemctl --root "$initdir" disable systemd-networkd.socket
 
     systemctl --root "$initdir" enable network-cleanup.service
+    systemctl --root "$initdir" enable parse-ip-for-networkd.service
     systemctl --root "$initdir" enable afterburn-network-kargs.service
 }

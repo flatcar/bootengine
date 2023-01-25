@@ -69,7 +69,7 @@ if [[ -n "${usr}" && -n "${usrhash}" ]]; then
 	IgnoreOnIsolate=true
 	BindsTo=dev-mapper-usr.device
 	BindsTo=${device}
-	After=${device} ignition-disks.service
+	After=${device}
 
 	[Service]
 	Type=oneshot

@@ -109,6 +109,10 @@ cat > ${UNIT_DIR}/ignition-setup.service <<EOF
 Description=Ignition (setup)
 DefaultDependencies=false
 
+# Flatcar: Load Ignition binary
+Requires=sysusr-usr.mount
+After=sysusr-usr.mount
+
 Requires=local-fs-pre.target
 Before=local-fs-pre.target
 

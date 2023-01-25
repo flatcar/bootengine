@@ -19,7 +19,6 @@ install_ignition_unit() {
 install() {
     # Flatcar: add coreos-metadata, systemd-detect-virt, mountpoint, nvme
     inst_multiple \
-        coreos-metadata \
         basename \
         lsblk
 
@@ -74,9 +73,6 @@ install() {
     inst_script "$moddir/ignition-setup.sh" \
         "/usr/sbin/ignition-setup"
 
-    # Flatcar: use from path
-    inst_multiple "ignition"
-
     # Rule to allow udev to discover unformatted encrypted devices
     inst_simple "$moddir/99-xx-ignition-systemd-cryptsetup.rules" \
         "/usr/lib/udev/rules.d/99-xx-ignition-systemd-cryptsetup.rules"
@@ -127,4 +123,11 @@ install() {
     # needed for openstack config drive support
     # Flatcar: add 66-azure-storage.rules and 90-cloud-storage.rules
     inst_rules 60-cdrom_id.rules 66-azure-storage.rules 90-cloud-storage.rules
+
+    # Flatcar: add wrappers for Ignition and coreos-metadata (afterburn)
+    # which rely on the earlier /sysusr/usr mount
+    inst_script "$moddir/coreos-metadata-wrapper" \
+        "/usr/bin/coreos-metadata"
+    inst_script "$moddir/ignition-wrapper" \
+        "/usr/bin/ignition"
 }
