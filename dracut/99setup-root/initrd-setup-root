@@ -14,26 +14,22 @@ MACHINE_ID_FILE="/sysroot/etc/machine-id"
 # This creates the modifiable users/groups in /sysroot/etc,
 # initializing the shadow database in the process. This needs to
 # happen early, so systemd-tmpfiles can read the user info from
-# /sysroot.
+# /sysroot and Ignition can operate on these users.
 /usr/sbin/flatcar-tmpfiles /sysroot
 
-# Initialize base filesystem
+# Initialize base filesystem without /etc
 systemd-tmpfiles --root=/sysroot --create \
-    baselayout.conf baselayout-etc.conf baselayout-usr.conf \
-    baselayout-home.conf etc.conf etc-shadow.conf
-
-# Not all images provide these files so check before using them.
-# Note: selinux-base.conf must run before libsemanage.conf
-for config in baselayout-ldso.conf selinux-base.conf libsemanage.conf; do
-    if [ -e "/sysroot/usr/lib/tmpfiles.d/${config}" ]; then
-        systemd-tmpfiles --root=/sysroot --create "${config}"
-    fi
-done
+    baselayout.conf baselayout-usr.conf \
+    baselayout-home.conf
 
 # Remove our phony id. systemd will initialize this during boot.
 if grep -qs "${COREOS_BLANK_MACHINE_ID}" "${MACHINE_ID_FILE}"; then
     rm "${MACHINE_ID_FILE}"
 fi
+
+# Set up overlay mount for /etc (as long as we can't use syscfg for that)
+mkdir -p /sysroot/.etc-work
+mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc,upperdir=/sysroot/etc,workdir=/sysroot/.etc-work,redirect_dir=on,metacopy=off,noatime /sysroot/etc
 
 # PXE initrds may provide OEM
 if [ -d /usr/share/oem ] && mountpoint --quiet /sysroot/usr/share/oem; then
