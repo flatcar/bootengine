@@ -1,4 +1,5 @@
-#!/bin/sh -e
+#!/bin/bash
+set -e
 # -*- mode: shell-script; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
 # ex: ts=8 sw=4 sts=4 et filetype=sh
 
@@ -6,6 +7,25 @@
 # for consistency regardless if first_boot= is passed to create missing
 # files if needed and make it easier to debug. In fact, it was required
 # to use first_boot=1 with PXE to get a proper rootfs which is strange.
+
+function usrbin() {
+  local cmd="$1"
+  shift
+  LD_LIBRARY_PATH=/sysusr/usr/lib64 /sysusr/usr/bin/"${cmd}" "$@"
+}
+
+function walksysroot() {
+  local topdir="$1"
+  shift
+  local action="$1"
+  shift
+  while IFS= read -r -d '' entry; do
+    "${action}" "${entry}" || true
+  done < <(chroot /sysroot /usr/bin/find "${topdir}" -xdev -depth "$@" -print0)
+  # Do a chroot to be able to pass "-regex /etc/something" without having to prepend /sysroot
+  # in the regex. Also do the print0 as last action, after filtering.
+  true # Do not carry any last condition evaluation over as return code
+}
 
 # /etc/machine-id after a new image is created:
 COREOS_BLANK_MACHINE_ID="42000000000000000000000000000042"
@@ -25,6 +45,57 @@ systemd-tmpfiles --root=/sysroot --create \
 # Remove our phony id. systemd will initialize this during boot.
 if grep -qs "${COREOS_BLANK_MACHINE_ID}" "${MACHINE_ID_FILE}"; then
     rm "${MACHINE_ID_FILE}"
+fi
+
+function overlaycleanup() {
+  local entry="/sysroot$1"
+  local usrentry="/sysroot/usr/share/flatcar$1"
+  # Return if we hit the /etc directory itself which we don't want to delete
+  [ "${entry}" = "/sysroot/etc" ] && return 0
+  # Return if there is no symlink and no file/dir for the entry in /usr/share/flatcar/etc
+  # (First check -L because -e fails if the symlink target is not found which will be the case due to added /sysroot/)
+  [ ! -L "${usrentry}" ] && [ ! -e "${usrentry}" ] && return 0
+  # Ensure that both entries match for user, group, permissions, and type
+  [ "$(stat --printf='%a %u %g %F\n' "${entry}")" != "$(stat --printf='%a %u %g %F\n' "${usrentry}")" ] && return 0
+  # Also check ACLs but only if not symlink
+  [ ! -L "${usrentry}" ] && [ "$(usrbin getfacl -nc "${entry}" 2>/dev/null)" != "$(usrbin getfacl -nc "${usrentry}" 2>/dev/null)" ] && return 0
+  # If any parent dir is an opaque overlayfs dir (i.e. recreated by the user), we don't remove any equal contents compared to
+  # the lowerdir because they won't be propagated from the lowerdir
+  local parent="${entry}"
+  while true; do
+    parent=$(usrbin dirname "${parent}") || return 0
+    if [ "${parent}" = "" ] || [ "${parent}" = "/" ] || [ "${parent}" = "." ]; then
+      return 0 # Stop processing this entry on unexpected results (but continue boot)
+    fi
+    if [ "${parent}" = "/sysroot" ]; then
+      break
+    fi
+    [ "$(usrbin attr -R -q -g overlay.opaque "${parent}" 2>/dev/null)" = "y" ] && return 0
+  done
+  # Ignore the SELinux labels because we probably would want to relabel later.
+  # Xattrs are ignored (we could list them and check each non-SELinux entry for equality).
+  # When checking the type, L must be checked first because d/f dereference
+  if [ -L "${entry}" ]; then
+    [ "$(readlink "${entry}")" = "$(readlink "${usrentry}")" ] && { rm "${entry}" || true ; }
+  elif [ -d "${entry}" ]; then
+    # Try to remove empty directories (fails if not empty) but skip if they are opaque overlayfs dirs
+    [ "$(usrbin attr -R -q -g overlay.opaque "${entry}" 2>/dev/null)" != "y" ] && { usrbin rmdir "${entry}" 2>/dev/null || true ; }
+  elif [ -f "${entry}" ]; then
+    # We directly compare contents, this also covers size
+    usrbin cmp -s "${entry}" "${usrentry}" && { rm "${entry}" || true ; }
+  fi
+  true # Even if not needed at the moment, do not carry any return code over from a previous "false && true"
+}
+
+mkdir -p /sysroot/etc
+# Remove any files that haven't changed compared to the (new) overlay,
+# this helps that future updates will be able to take effect.
+# An opt-out flag file is used for users that want to prevent that their
+# current /etc/ files get auto-updated in the future if they happen to
+# be identical to what Flatcar ships and thus get cleaned up but later
+# Flatcar ships an updated file with changes the user didn't want.
+if [ ! -e "/sysroot/etc/.no-dup-update" ]; then
+  walksysroot /etc overlaycleanup
 fi
 
 # Set up overlay mount for /etc (as long as we can't use syscfg for that)
