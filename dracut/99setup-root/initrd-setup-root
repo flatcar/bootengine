@@ -31,6 +31,36 @@ function walksysroot() {
 COREOS_BLANK_MACHINE_ID="42000000000000000000000000000042"
 MACHINE_ID_FILE="/sysroot/etc/machine-id"
 
+function selectiveosreset() {
+  local entry="/sysroot$1"
+  # Don't remove /sysroot itself
+  [ "${entry}" = "/sysroot" ] && return 0
+  [ "${entry}" = "/sysroot/" ] && return 0
+  # Don't remove the active /usr mount point
+  [ "${entry}" = "/sysroot/usr" ] && return 0
+  # Not really needed because find doesn't add a trailing slash but to be safe:
+  [ "${entry}" = "/sysroot/usr/" ] && return 0
+  if [ -d "${entry}" ]; then
+    # Try to delete dir, will fail if its contents are preserved
+    usrbin rmdir "${entry}" 2>/dev/null || true
+  else
+    # Delete file, Report wrong paths to nonexisting files or any other errors
+    # (journalctl -u initrd-setup-root) but don't hard fail the boot
+    rm "${entry}" || true
+  fi
+  true # Do not carry any last condition evaluation over as return code
+}
+
+# Do the selective OS reset as prepared by flatcar-reset
+if [ -s /sysroot/selective-os-reset ]; then
+  walksysroot / selectiveosreset -regextype egrep -not -regex "$(cat /sysroot/selective-os-reset)"
+  rm -f /sysroot/selective-os-reset
+  # Always remove the machine-id file because otherwise it's not a first boot.
+  # The previous value can be preserved through the systemd.machine_id=
+  # kernel parameter.
+  rm -f /sysroot/etc/machine-id
+fi
+
 # This creates the modifiable users/groups in /sysroot/etc,
 # initializing the shadow database in the process. This needs to
 # happen early, so systemd-tmpfiles can read the user info from
