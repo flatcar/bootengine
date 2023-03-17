@@ -35,5 +35,7 @@ After=ignition-setup.service
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
+# Flatcar: Unmount any OEM mount in case the Ignition config has one defined
+ExecStartPre=/bin/bash -c 'if ! mount | grep -m 1 /sysroot/usr/share/oem | grep tmpfs; then umount /sysroot/usr/share/oem || true; fi'
 ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=mount --log-to-stdout
 ExecStop=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=umount --log-to-stdout
