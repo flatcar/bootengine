@@ -13,6 +13,9 @@ After=ignition-setup.service ignition-disks.service
 # setup the root filesystem before we try do things like create users on it.
 Requires=initrd-setup-root.service
 After=initrd-setup-root.service
+# Already mount the OEM partition here so that it works to write files
+# without having to declare it as initrd mount in Ignition
+RequiresMountsFor=/sysroot/usr/ /sysroot/usr/share/oem/
 
 OnFailure=emergency.target
 OnFailureJobMode=isolate
@@ -27,4 +30,6 @@ Before=initrd-parse-etc.service
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
+# Flatcar: Make sure that the OEM mount point is there even if it shortly was away
+ExecStartPre=-systemctl start sysroot-usr-share-oem.mount
 ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=files --log-to-stdout
