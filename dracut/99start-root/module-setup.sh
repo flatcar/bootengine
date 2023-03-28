@@ -4,4 +4,6 @@
 
 install() {
     inst_rules "$moddir/65-start-root.rules"
+
+    sed -i 's/After=local-fs.target /After=/' "$initdir/usr/lib/systemd/system/systemd-tmpfiles-setup.service"
 }
