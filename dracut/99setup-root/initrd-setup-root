@@ -82,9 +82,15 @@ done
 /usr/sbin/flatcar-tmpfiles /sysroot
 
 # Initialize base filesystem without /etc
+# Don't run all tmpfiles rules but only the essential ones
+# required to let systemd do its work correctly
+# (baselayout.conf must contain /var/log/journal for it to
+# be created early enough, base_image_var.conf has other
+# directories that packages installed). The rest will be
+# done later as usual through systemd-tmpfiles-setup.service.
 systemd-tmpfiles --root=/sysroot --create \
     baselayout.conf baselayout-usr.conf \
-    baselayout-home.conf
+    baselayout-home.conf base_image_var.conf
 
 # Remove our phony id. systemd will initialize this during boot.
 if grep -qs "${COREOS_BLANK_MACHINE_ID}" "${MACHINE_ID_FILE}"; then
