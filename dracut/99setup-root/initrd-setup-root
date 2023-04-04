@@ -152,7 +152,9 @@ fi
 mkdir -p /sysroot/.etc-work
 mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc,upperdir=/sysroot/etc,workdir=/sysroot/.etc-work,redirect_dir=on,metacopy=off,noatime /sysroot/etc
 
-# PXE initrds may provide OEM
-if [ -d /usr/share/oem ] && mountpoint --quiet /sysroot/usr/share/oem; then
-    cp -Ra /usr/share/oem/. /sysroot/usr/share/oem
+# PXE initrds may provide OEM. Despite OEM partition being moved to
+# /oem in general, we keep checking /usr/share/oem in initrds to avoid
+# breaking compatibility.
+if [ -d /usr/share/oem ] && mountpoint --quiet /sysroot/oem; then
+    cp -Ra /usr/share/oem/. /sysroot/oem
 fi

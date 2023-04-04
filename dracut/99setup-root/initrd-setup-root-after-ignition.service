@@ -1,7 +1,7 @@
 [Unit]
 Description=Root filesystem completion
 DefaultDependencies=no
-RequiresMountsFor=/sysroot/usr/ /sysroot/usr/share/oem/
+RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
 After=initrd-root-fs.target ignition-files.service initrd-setup-root.service
 Before=initrd-parse-etc.service
 
