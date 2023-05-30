@@ -1,5 +1,5 @@
 #!/bin/bash
-# Set up /usr/lib/ignition, copying contents from /usr/share/oem.
+# Set up /usr/lib/ignition, copying contents from /oem.
 
 set -e
 
@@ -13,7 +13,7 @@ normal)
     ;;
 pxe)
     # OEM directory in the initramfs itself
-    src=/usr/share/oem
+    src=/oem
     ;;
 *)
     echo "Usage: $0 {normal|pxe}" >&2

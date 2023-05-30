@@ -9,11 +9,11 @@ set -euo pipefail
 VERSION=$(grep -m 1 "^VERSION=" /sysroot/usr/lib/os-release | cut -d = -f 2)
 
 # Not all OEM partitions have an oem-release file but we require it now
-OEMID=$({ grep -m 1 -o "^ID=.*" /sysroot/usr/share/oem/oem-release || true ; } | cut -d = -f 2)
+OEMID=$({ grep -m 1 -o "^ID=.*" /sysroot/oem/oem-release || true ; } | cut -d = -f 2)
 
 # The active-oem-OEMID file gets created by the update-engine postinst action if both old and new /usr partitions have a sysext
-if [ "${OEMID}" != "" ] && [ -e "/sysroot/usr/share/oem/sysext/active-oem-${OEMID}" ]; then
-  SYSEXT_OEM_PART="/usr/share/oem/sysext/oem-${OEMID}-${VERSION}.raw"
+if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; then
+  SYSEXT_OEM_PART="/oem/sysext/oem-${OEMID}-${VERSION}.raw"
   SYSEXT_ROOT_PART="/etc/flatcar/oem-sysext/oem-${OEMID}-${VERSION}.raw"
   SYMLINK="/sysroot/etc/extensions/oem-${OEMID}.raw"
   ACTIVE_OEM=""
@@ -33,9 +33,9 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/usr/share/oem/sysext/active-oem-${OEMI
       fi
     fi
     # Try to store the active sysext in the OEM partition if there is enough space, this helps to support clearing the root partition
-    mkdir -p /sysroot/usr/share/oem/sysext/
+    mkdir -p /sysroot/oem/sysext/
     echo "Trying to move ${SYSEXT_ROOT_PART} to OEM partition" >&2
-    if mv "/sysroot/${SYSEXT_ROOT_PART}" /sysroot/usr/share/oem/sysext/; then
+    if mv "/sysroot/${SYSEXT_ROOT_PART}" /sysroot/oem/sysext/; then
       ACTIVE_OEM="${SYSEXT_OEM_PART}"
     else
       echo "That failed, keeping it on root partition" >&2
@@ -54,10 +54,10 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/usr/share/oem/sysext/active-oem-${OEMI
   fi
 
   # Flag file created by the update-engine postinst action if both /usr partitions have a sysext and active-oem-OEMID didn't exist
-  if [ -e "/sysroot/usr/share/oem/sysext/migrate-oem-${OEMID}" ]; then
+  if [ -e "/sysroot/oem/sysext/migrate-oem-${OEMID}" ]; then
     echo "Found migration flag, deleting known old OEM partition files" >&2
-    # TODO: For each OEMID, delete known old files under /usr/share/oem/ and /etc/
-    rm -f "/sysroot/usr/share/oem/sysext/migrate-oem-${OEMID}"
+    # TODO: For each OEMID, delete known old files under /oem/ and /etc/
+    rm -f "/sysroot/oem/sysext/migrate-oem-${OEMID}"
   fi
 fi
 
