@@ -13,6 +13,7 @@ OEMID=$({ grep -m 1 -o "^ID=.*" /sysroot/oem/oem-release || true ; } | cut -d = 
 
 # The active-oem-OEMID file gets created by the update-engine postinst action if both old and new /usr partitions have a sysext
 if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; then
+  INITIAL_MVP="/oem/sysext/oem-${OEMID}-initial.raw"
   SYSEXT_OEM_PART="/oem/sysext/oem-${OEMID}-${VERSION}.raw"
   SYSEXT_ROOT_PART="/etc/flatcar/oem-sysext/oem-${OEMID}-${VERSION}.raw"
   SYMLINK="/sysroot/etc/extensions/oem-${OEMID}.raw"
@@ -41,6 +42,12 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
       echo "That failed, keeping it on root partition" >&2
       ACTIVE_OEM="${SYSEXT_ROOT_PART}"
     fi
+  elif [ -e "/sysroot/${INITIAL_MVP}" ]; then
+    # This is the initial MVP OEM sysext that is not bound to the OS version because
+    # at that time update support was missing.
+    # Like any other inactive sysext, it will be deleted by update-engine's post-inst action
+    # when it's not needed (i.e., the active and new inactive both have a versioned sysext)
+    ACTIVE_OEM="${INITIAL_MVP}"
   else
     echo "Did not find ${SYSEXT_OEM_PART} nor ${SYSEXT_ROOT_PART}" >&2
     # TODO: Try to download it as fallback (needs starting and waiting for the network target), or maybe just give up and place a warning somewhere (motd?)
