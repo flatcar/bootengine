@@ -63,7 +63,11 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
   # Flag file created by the update-engine postinst action if both /usr partitions have a sysext and active-oem-OEMID didn't exist
   if [ -e "/sysroot/oem/sysext/migrate-oem-${OEMID}" ]; then
     echo "Found migration flag, deleting known old OEM partition files" >&2
-    # TODO: For each OEMID, delete known old files under /oem/ and /etc/
+    # For each OEMID, delete known old files under /oem/ and /etc/ based on the contents of the flag file
+    # (The list is maintained in the update-engine post-inst action)
+    while IFS="" read -r entry; do
+      rm -f "${entry}" || true
+    done < "/sysroot/oem/sysext/migrate-oem-${OEMID}"
     rm -f "/sysroot/oem/sysext/migrate-oem-${OEMID}"
   fi
 fi
