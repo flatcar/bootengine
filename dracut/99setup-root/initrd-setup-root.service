@@ -4,6 +4,8 @@ DefaultDependencies=no
 RequiresMountsFor=/sysroot/usr/
 After=initrd-root-fs.target
 Before=initrd-parse-etc.service
+OnFailure=emergency.target
+OnFailureJobMode=isolate
 
 [Service]
 Type=oneshot
