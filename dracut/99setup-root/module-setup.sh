@@ -19,4 +19,6 @@ install() {
 
     inst_simple "${moddir}/initrd-setup-root-after-ignition.service" \
         "${systemdsystemunitdir}/initrd-setup-root-after-ignition.service"
+    inst_script "$moddir/gpg-agent-wrapper" \
+        "/usr/bin/gpg-agent"
 }
