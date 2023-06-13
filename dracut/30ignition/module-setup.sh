@@ -59,6 +59,15 @@ install() {
         pwmake \
         tpm2_create
 
+
+
+ inst_simple "$moddir/clevis-luks-askpass.service" "$systemdsystemunitdir/clevis-luks-askpass.service"
+ inst_simple "$moddir/clevis-luks-askpass.path" "$systemdsystemunitdir/clevis-luks-askpass.path"
+
+   systemctl -q --root "$initdir" add-wants cryptsetup.target clevis-luks-askpass.path
+
+
+
     # Required by s390x's z/VM installation.
     # Supporting https://github.com/coreos/ignition/pull/865
     inst_multiple -o chccwdev vmur
@@ -132,4 +141,47 @@ install() {
         "/usr/bin/ignition"
     inst_script "$moddir/setfiles-wrapper" \
         "/usr/bin/setfiles"
+    inst_script "$moddir/clevis-decrypt-tpm2-wrapper" \
+        "/usr/bin/clevis-decrypt-tpm2"
+    inst_script "$moddir/clevis-decrypt-wrapper" \
+        "/usr/bin/clevis-decrypt"
+    inst_script "$moddir/clevis-encrypt-tpm2-wrapper" \
+        "/usr/bin/clevis-encrypt-tpm2"
+    inst_script "$moddir/clevis-luks-askpass-wrapper" \
+        "/usr/bin/clevis-luks-askpass"
+    inst_script "$moddir/clevis-luks-bind-wrapper" \
+        "/usr/bin/clevis-luks-bind"
+    inst_script "$moddir/clevis-luks-common-functions-wrapper" \
+        "/usr/bin/clevis-luks-common-functions"
+    inst_script "$moddir/clevis-luks-list-wrapper" \
+        "/usr/bin/clevis-luks-list"
+    inst_script "$moddir/clevis-luks-unlock-wrapper" \
+        "/usr/bin/clevis-luks-unlock"
+    inst_script "$moddir/clevis-reply-password-wrapper" \
+        "/usr/bin/clevis-reply-password"
+    inst_script "$moddir/clevis-wrapper" \
+        "/usr/bin/clevis"
+    inst_script "$moddir/jose-wrapper" \
+        "/usr/bin/jose"
+    inst_script "$moddir/luksmeta-wrapper" \
+        "/usr/bin/luksmeta"
+    inst_script "$moddir/setfiles-wrapper" \
+        "/usr/bin/setfiles"
+    inst_script "$moddir/tpm2_createprimary-wrapper" \
+        "/usr/bin/tpm2_createprimary"
+    inst_script "$moddir/tpm2_flushcontext-wrapper" \
+        "/usr/bin/tpm2_flushcontext"
+    inst_script "$moddir/tpm2_load-wrapper" \
+        "/usr/bin/tpm2_load"
+    inst_script "$moddir/tpm2_pcrlist-wrapper" \
+        "/usr/bin/tpm2_pcrlist"
+    inst_script "$moddir/tpm2_pcrread-wrapper" \
+        "/usr/bin/tpm2_pcrread"
+    inst_script "$moddir/tpm2_unseal-wrapper" \
+        "/usr/bin/tpm2_unseal"
+
+
+
+
+
 }

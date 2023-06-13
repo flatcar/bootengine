@@ -1,0 +1,13 @@
+[Unit]
+Description=Forward Password Requests to Clevis Directory Watch
+Documentation=man:clevis-luks-unlockers(7)
+DefaultDependencies=no
+Before=cryptsetup-pre.target
+Wants=cryptsetup-pre.target
+
+[Path]
+DirectoryNotEmpty=/run/systemd/ask-password
+MakeDirectory=yes
+
+[Install]
+WantedBy=cryptsetup.target

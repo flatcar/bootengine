@@ -1,0 +1,2 @@
+#!/bin/sh
+LD_LIBRARY_PATH=/sysusr/usr/lib64 exec /sysusr/usr/bin/clevis-luks-common-functions "$@"
