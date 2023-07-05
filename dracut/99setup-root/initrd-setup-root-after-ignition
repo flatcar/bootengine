@@ -28,8 +28,19 @@ function download_and_verify() {
     URLS+=("https://${channel}.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/${name}")
   fi
   URLS+=("https://bincache.flatcar-linux.net/images/${FLATCAR_BOARD/-usr}/${VERSION}/${name}")
+  local COUNT=""
   local URL=""
   for URL in "${URLS[@]}"; do
+    # Workaround: Once curl starts and fails to resolve a DNS name (due to a race or temporary failure),
+    # it sticks to it for each retry, making the retry pointless. Therefore, we first have to
+    # add a curl waiter that does the DNS retry and won't be stuck (nor waste 30*60 seconds).
+    for COUNT in $(usrbin seq 30); do
+      if usrbin curl -fsSL --head "${URL}" > /dev/null; then
+        break
+      fi
+      sleep 1
+    done
+    # If the loop terminated without the break, rely on the command below to fail
     usrcurl -o "/sysroot/${name}" "${URL}" || { rm -f "/sysroot/${name}" ; continue ; }
     usrcurl -o "/sysroot/${name}.sig" "${URL}.sig" || { rm -f "/sysroot/${name}.sig" ; continue ; }
     break
