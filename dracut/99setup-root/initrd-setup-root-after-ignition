@@ -133,15 +133,15 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     umount "/sysroot/oem-${OEMID}.raw"
     mkdir -p /sysroot/oem/sysext/
     if [ "${ACTIVE_OEM}" != "" ]; then
-      mv "/sysroot/oem-${OEMID}.raw" "/sysroot/${ACTIVE_OEM}"
+      mv "/sysroot/oem-${OEMID}.raw" "/sysroot${ACTIVE_OEM}"
     else
       echo "Trying to place /sysroot/oem-${OEMID}.raw on OEM partition" >&2
-      if mv "/sysroot/oem-${OEMID}.raw" /sysroot/oem/sysext/; then
+      if mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_OEM_PART}"; then
         ACTIVE_OEM="${SYSEXT_OEM_PART}"
       else
         echo "That failed, moving it to right location on root partition" >&2
         mkdir -p /sysroot/etc/flatcar/oem-sysext/
-        mv "/sysroot/oem-${OEMID}.raw" /sysroot/etc/flatcar/oem-sysext/
+        mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_ROOT_PART}"
         ACTIVE_OEM="${SYSEXT_ROOT_PART}"
       fi
     fi
