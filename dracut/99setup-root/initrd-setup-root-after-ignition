@@ -15,6 +15,7 @@ function download_and_verify() {
   # Downloads release artifact to /sysroot/$name and verifies $name.sig with gpg
   # Expects the env vars: FLATCAR_BOARD, VERSION
   local name="$1"
+  # TODO: We should use update.release.flatcar-linux.net and then decode the payload
   local channel=""
   case $(echo "${VERSION}" | cut -d . -f 2) in
     0) channel="alpha" ;;
@@ -121,6 +122,8 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     echo "Did not find ${SYSEXT_OEM_PART} nor ${SYSEXT_ROOT_PART}, downloading" >&2
     systemctl start --quiet systemd-networkd systemd-resolved
     download_and_verify "oem-${OEMID}.raw"
+    # TODO: This can be removed once we download the update payload from update.release.flatcar-linux.net
+    # because it won't be the "initial" MVP sysext
     mkdir -p /run/_oem
     mount "/sysroot/oem-${OEMID}.raw" /run/_oem/
     if grep -q SYSEXT_LEVEL=1.0 "/run/_oem/usr/lib/extension-release.d/extension-release.oem-${OEMID}" ; then
