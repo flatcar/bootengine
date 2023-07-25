@@ -158,7 +158,7 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     # For each OEMID, delete known old files under /oem/ and /etc/ based on the contents of the flag file
     # (The list is maintained in the update-engine post-inst action)
     while IFS="" read -r entry; do
-      rm -f "${entry}" || true
+      rm -rf "${entry}" || true
     done < "/sysroot/oem/sysext/migrate-oem-${OEMID}"
     rm -f "/sysroot/oem/sysext/migrate-oem-${OEMID}"
   fi
