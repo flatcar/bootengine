@@ -31,7 +31,11 @@ function download_and_verify() {
   URLS+=("https://bincache.flatcar-linux.net/images/${FLATCAR_BOARD/-usr}/${VERSION}/${name}")
   local COUNT=""
   local URL=""
-  for URL in "${URLS[@]}"; do
+  for URL in "${URLS[@]}" LAST; do
+    if [ "${URL}" = LAST ]; then
+      echo "Failed to download required sysext image ${name}" >&2
+      exit 1 # Fail the boot
+    fi
     # Workaround: Once curl starts and fails to resolve a DNS name (due to a race or temporary failure),
     # it sticks to it for each retry, making the retry pointless. Therefore, we first have to
     # add a curl waiter that does the DNS retry and won't be stuck (nor waste 30*60 seconds).
@@ -41,15 +45,10 @@ function download_and_verify() {
       fi
       sleep 1
     done
-    # If the loop terminated without the break, rely on the command below to fail
     usrcurl -o "/sysroot/${name}" "${URL}" || { rm -f "/sysroot/${name}" ; continue ; }
     usrcurl -o "/sysroot/${name}.sig" "${URL}.sig" || { rm -f "/sysroot/${name}.sig" ; continue ; }
     break
   done
-  if [ ! -e "/sysroot/${name}" ] || [ ! -e "/sysroot/${name}.sig" ]; then
-    echo "Failed to download required sysext image ${name}" >&2
-    exit 1 # Fail the boot
-  fi
   local GPG_KEY=""
   local GPG_LONG_ID=""
   # Extract public key from flatcar-install
