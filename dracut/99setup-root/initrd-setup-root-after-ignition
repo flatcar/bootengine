@@ -158,7 +158,11 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     # For each OEMID, delete known old files under /oem/ and /etc/ based on the contents of the flag file
     # (The list is maintained in the update-engine post-inst action)
     while IFS="" read -r entry; do
-      rm -rf "${entry}" || true
+      if [ "${entry}" = "/sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service" ] && [ -L "/sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service" ]; then
+        ln -fs /usr/lib/systemd/system/oem-cloudinit.service /sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service || true
+      else
+        rm -rf "${entry}" || true
+      fi
     done < "/sysroot/oem/sysext/migrate-oem-${OEMID}"
     rm -f "/sysroot/oem/sysext/migrate-oem-${OEMID}"
   fi
