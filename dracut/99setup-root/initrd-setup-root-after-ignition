@@ -171,9 +171,12 @@ fi
 # Manage optional Flatcar extensions that are coupled to the OS version.
 # They are only stored on the root partition but not directly in /etc/extensions/ because there
 # can only be one file for the extension name (this could be covered by the ".v directory" proposal).
-# The enabled-sysext.conf file contains the names per line and supports comments,
-# update-engine uses this file to know which extensions to download.
-for NAME in $(grep -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf || true); do
+# The enabled-sysext.conf file is read from /etc and /usr and contains one name per line,
+# and when the name is prefixed with a "-" it means that the extension should be disabled if enabled by default in the file from /usr.
+# It may contain comments starting with "#" at the beginning of a line or after a name.
+# The file is also used in update-engine to know which extensions to download.
+# Note that we don't need "{ grep || true ; }" to suppress the match return code because in for _ in $(grep...) return codes are ignored
+for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysroot/usr/share/flatcar/enabled-sysext.conf | grep -v -x -f <(grep '^-' /sysroot/etc/flatcar/enabled-sysext.conf | cut -d - -f 2-) | grep -v -P '^(-).*'); do
   ACTIVE_EXT="/etc/flatcar/sysext/flatcar-${NAME}-${VERSION}.raw"
   if [ ! -e "/sysroot/${ACTIVE_EXT}" ]; then
     echo "Did not find ${ACTIVE_EXT}" >&2
