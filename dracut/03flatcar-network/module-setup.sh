@@ -5,7 +5,7 @@
 
 # called by dracut
 depends() {
-    echo systemd-networkd
+    echo net-lib systemd-networkd
 }
 
 # called by dracut
@@ -41,10 +41,6 @@ install() {
 
     inst_simple "$moddir/zz-default.network" \
         "$systemdutildir/network/zz-default.network"
-
-    # install net-lib.sh regardless of its parent module's status
-    inst_simple "$moddir/../40network/net-lib.sh" /lib/net-lib.sh ||
-    dfatal 'Could not install net-lib.sh from the network module'
 
     # add a hook to generate networkd configuration from ip= arguments
     inst_hook cmdline 99 "$moddir/parse-ip-for-networkd.sh"
