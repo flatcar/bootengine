@@ -156,14 +156,14 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
   if [ -e "/sysroot/oem/sysext/migrate-oem-${OEMID}" ]; then
     echo "Found migration flag, deleting known old OEM partition files" >&2
     # For each OEMID, delete known old files under /oem/ and /etc/ based on the contents of the flag file
-    # (The list is maintained in the update-engine post-inst action)
+    # (The list is maintained in the coreos-base/misc-files package)
     while IFS="" read -r entry; do
       if [ "${entry}" = "/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service" ] && [ -L "/sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service" ]; then
         ln -fs /usr/lib/systemd/system/oem-cloudinit.service /sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service || true
       elif [ "${entry}" != "" ]; then
         rm -rf "/sysroot${entry}" || true
       fi
-    done < "/sysroot/oem/sysext/migrate-oem-${OEMID}"
+    done < "/sysroot/usr/share/flatcar/oems/${OEMID}"
     rm -f "/sysroot/oem/sysext/migrate-oem-${OEMID}"
   fi
 fi
