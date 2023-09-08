@@ -15,6 +15,7 @@ function download_and_verify() {
   # Downloads release artifact to /sysroot/$name and verifies $name.sig with gpg
   # Expects the env vars: FLATCAR_BOARD, VERSION
   local name="$1"
+  # TODO: We should use update.release.flatcar-linux.net and then decode the payload
   local channel=""
   case $(echo "${VERSION}" | cut -d . -f 2) in
     0) channel="alpha" ;;
@@ -30,7 +31,11 @@ function download_and_verify() {
   URLS+=("https://bincache.flatcar-linux.net/images/${FLATCAR_BOARD/-usr}/${VERSION}/${name}")
   local COUNT=""
   local URL=""
-  for URL in "${URLS[@]}"; do
+  for URL in "${URLS[@]}" LAST; do
+    if [ "${URL}" = LAST ]; then
+      echo "Failed to download required sysext image ${name}" >&2
+      exit 1 # Fail the boot
+    fi
     # Workaround: Once curl starts and fails to resolve a DNS name (due to a race or temporary failure),
     # it sticks to it for each retry, making the retry pointless. Therefore, we first have to
     # add a curl waiter that does the DNS retry and won't be stuck (nor waste 30*60 seconds).
@@ -40,15 +45,10 @@ function download_and_verify() {
       fi
       sleep 1
     done
-    # If the loop terminated without the break, rely on the command below to fail
     usrcurl -o "/sysroot/${name}" "${URL}" || { rm -f "/sysroot/${name}" ; continue ; }
     usrcurl -o "/sysroot/${name}.sig" "${URL}.sig" || { rm -f "/sysroot/${name}.sig" ; continue ; }
     break
   done
-  if [ ! -e "/sysroot/${name}" ] || [ ! -e "/sysroot/${name}.sig" ]; then
-    echo "Failed to download required sysext image ${name}" >&2
-    exit 1 # Fail the boot
-  fi
   local GPG_KEY=""
   local GPG_LONG_ID=""
   # Extract public key from flatcar-install
@@ -121,6 +121,8 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     echo "Did not find ${SYSEXT_OEM_PART} nor ${SYSEXT_ROOT_PART}, downloading" >&2
     systemctl start --quiet systemd-networkd systemd-resolved
     download_and_verify "oem-${OEMID}.raw"
+    # TODO: This can be removed once we download the update payload from update.release.flatcar-linux.net
+    # because it won't be the "initial" MVP sysext
     mkdir -p /run/_oem
     mount "/sysroot/oem-${OEMID}.raw" /run/_oem/
     if grep -q SYSEXT_LEVEL=1.0 "/run/_oem/usr/lib/extension-release.d/extension-release.oem-${OEMID}" ; then
@@ -130,15 +132,15 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     umount "/sysroot/oem-${OEMID}.raw"
     mkdir -p /sysroot/oem/sysext/
     if [ "${ACTIVE_OEM}" != "" ]; then
-      mv "/sysroot/oem-${OEMID}.raw" "/sysroot/${ACTIVE_OEM}"
+      mv "/sysroot/oem-${OEMID}.raw" "/sysroot${ACTIVE_OEM}"
     else
       echo "Trying to place /sysroot/oem-${OEMID}.raw on OEM partition" >&2
-      if mv "/sysroot/oem-${OEMID}.raw" /sysroot/oem/sysext/; then
+      if mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_OEM_PART}"; then
         ACTIVE_OEM="${SYSEXT_OEM_PART}"
       else
         echo "That failed, moving it to right location on root partition" >&2
         mkdir -p /sysroot/etc/flatcar/oem-sysext/
-        mv "/sysroot/oem-${OEMID}.raw" /sysroot/etc/flatcar/oem-sysext/
+        mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_ROOT_PART}"
         ACTIVE_OEM="${SYSEXT_ROOT_PART}"
       fi
     fi
@@ -154,10 +156,14 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
   if [ -e "/sysroot/oem/sysext/migrate-oem-${OEMID}" ]; then
     echo "Found migration flag, deleting known old OEM partition files" >&2
     # For each OEMID, delete known old files under /oem/ and /etc/ based on the contents of the flag file
-    # (The list is maintained in the update-engine post-inst action)
+    # (The list is maintained in the coreos-base/misc-files package)
     while IFS="" read -r entry; do
-      rm -f "${entry}" || true
-    done < "/sysroot/oem/sysext/migrate-oem-${OEMID}"
+      if [ "${entry}" = "/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service" ] && [ -L "/sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service" ]; then
+        ln -fs /usr/lib/systemd/system/oem-cloudinit.service /sysroot/etc/systemd/system/multi-user.target.wants/oem-cloudinit.service || true
+      elif [ "${entry}" != "" ]; then
+        rm -rf "/sysroot${entry}" || true
+      fi
+    done < "/sysroot/usr/share/flatcar/oems/${OEMID}"
     rm -f "/sysroot/oem/sysext/migrate-oem-${OEMID}"
   fi
 fi
@@ -165,9 +171,12 @@ fi
 # Manage optional Flatcar extensions that are coupled to the OS version.
 # They are only stored on the root partition but not directly in /etc/extensions/ because there
 # can only be one file for the extension name (this could be covered by the ".v directory" proposal).
-# The enabled-sysext.conf file contains the names per line and supports comments,
-# update-engine uses this file to know which extensions to download.
-for NAME in $(grep -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf || true); do
+# The enabled-sysext.conf file is read from /etc and /usr and contains one name per line,
+# and when the name is prefixed with a "-" it means that the extension should be disabled if enabled by default in the file from /usr.
+# It may contain comments starting with "#" at the beginning of a line or after a name.
+# The file is also used in update-engine to know which extensions to download.
+# Note that we don't need "{ grep || true ; }" to suppress the match return code because in for _ in $(grep...) return codes are ignored
+for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysroot/usr/share/flatcar/enabled-sysext.conf | grep -v -x -f <(grep '^-' /sysroot/etc/flatcar/enabled-sysext.conf | cut -d - -f 2-) | grep -v -P '^(-).*'); do
   ACTIVE_EXT="/etc/flatcar/sysext/flatcar-${NAME}-${VERSION}.raw"
   if [ ! -e "/sysroot/${ACTIVE_EXT}" ]; then
     echo "Did not find ${ACTIVE_EXT}" >&2
