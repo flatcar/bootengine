@@ -130,6 +130,7 @@ for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysr
   ACTIVE_EXT="/etc/flatcar/sysext/flatcar-${NAME}-${VERSION}.raw"
   if [ ! -e "/sysroot/${ACTIVE_EXT}" ]; then
     echo "Did not find ${ACTIVE_EXT}" >&2
+    systemctl start --quiet systemd-networkd systemd-resolved
     download_and_verify "flatcar-${NAME}.raw"
     mv "/sysroot/flatcar-${NAME}.raw" "/sysroot/${ACTIVE_EXT}"
   fi
