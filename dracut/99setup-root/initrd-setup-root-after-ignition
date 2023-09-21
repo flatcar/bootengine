@@ -12,60 +12,30 @@ function usrcurl() {
 }
 
 function download_and_verify() {
-  # Downloads release artifact to /sysroot/$name and verifies $name.sig with gpg
+  # Extracts release artifact to /sysroot/$final_name
   # Expects the env vars: FLATCAR_BOARD, VERSION
-  local name="$1"
-  # TODO: We should use update.release.flatcar-linux.net and then decode the payload
-  local channel=""
-  case $(echo "${VERSION}" | cut -d . -f 2) in
-    0) channel="alpha" ;;
-    1) channel="beta" ;;
-    2) channel="stable" ;;
-    3) channel="lts" ;;
-    *) ;;
-  esac
-  local URLS=()
-  if [ "${channel}" != "" ]; then
-    URLS+=("https://${channel}.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/${name}")
+  local final_name="$1"
+  local name="${final_name/.raw/.gz}"
+  URL="https://update.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/${name}"
+  # Check for scripts:sdk_container/src/third_party/coreos-overlay/coreos-base/coreos-au-key/files/developer-v1.pub.pem
+  if [ "$(usrbin md5sum /sysroot/usr/share/update_engine/update-payload-key.pub.pem | cut -d " " -f 1)" = "7192addf4a7f890c0057d21653eff2ea" ]; then
+    URL="https://bincache.flatcar-linux.net/images/${FLATCAR_BOARD/-usr}/${VERSION}/flatcar_test_update-${name}"
   fi
-  URLS+=("https://bincache.flatcar-linux.net/images/${FLATCAR_BOARD/-usr}/${VERSION}/${name}")
+  # TODO: Replace the below with invoking an ue-rs helper binary for downloading the payload
+  # from the URL and write the unpacked, verified file to the final name.
   local COUNT=""
-  local URL=""
-  for URL in "${URLS[@]}" LAST; do
-    if [ "${URL}" = LAST ]; then
-      echo "Failed to download required sysext image ${name}" >&2
-      exit 1 # Fail the boot
+  # Workaround: Once curl starts and fails to resolve a DNS name (due to a race or temporary failure),
+  # it sticks to it for each retry, making the retry pointless. Therefore, we first have to
+  # add a curl waiter that does the DNS retry and won't be stuck (nor waste 30*60 seconds).
+  for COUNT in $(usrbin seq 30); do
+    if usrbin curl -fsSL --head "${URL}" > /dev/null; then
+      break
     fi
-    # Workaround: Once curl starts and fails to resolve a DNS name (due to a race or temporary failure),
-    # it sticks to it for each retry, making the retry pointless. Therefore, we first have to
-    # add a curl waiter that does the DNS retry and won't be stuck (nor waste 30*60 seconds).
-    for COUNT in $(usrbin seq 30); do
-      if usrbin curl -fsSL --head "${URL}" > /dev/null; then
-        break
-      fi
-      sleep 1
-    done
-    usrcurl -o "/sysroot/${name}" "${URL}" || { rm -f "/sysroot/${name}" ; continue ; }
-    usrcurl -o "/sysroot/${name}.sig" "${URL}.sig" || { rm -f "/sysroot/${name}.sig" ; continue ; }
-    break
+    sleep 1
   done
-  local GPG_KEY=""
-  local GPG_LONG_ID=""
-  # Extract public key from flatcar-install
-  GPG_KEY=$(tr '\n' '_'  < /sysroot/usr/bin/flatcar-install | grep -Po 'GPG_KEY="\K.*?(?=")' | tr '_' '\n')
-  GPG_LONG_ID=$(grep -Po '^GPG_LONG_ID="\K.*?(?=")' /sysroot/usr/bin/flatcar-install)
-  export GNUPGHOME=/run/_gpg
-  mkdir -p "${GNUPGHOME}"
-  usrbin chmod 700 "${GNUPGHOME}"
-  usrbin gpg --batch --quiet --import <<< "${GPG_KEY}"
-  if ! usrbin gpg --batch --trusted-key "${GPG_LONG_ID}" --verify "/sysroot/${name}.sig" "/sysroot/${name}"; then
-    rm -f "/sysroot/${name}.sig" "/sysroot/${name}"
-    rm -rf "${GNUPGHOME}"
-    echo "Failed to verify required sysext image ${name}" >&2
-    exit 1 # Fail the boot
-  fi
-  rm "/sysroot/${name}.sig"
-  rm -rf "${GNUPGHOME}"
+  rm -f "/sysroot/${name}"
+  usrcurl -o "/sysroot/${name}" "${URL}" || { rm -f "/sysroot/${name}" ; return 1 ; }
+  usrbin unshare -m sh -c "mount --rbind /dev /sysroot/dev/ && mount -t proc /proc /sysroot/proc/ && PROTOPATH=/usr/share/update_engine/ chroot /sysroot /usr/share/update_engine/decode_payload /usr/share/update_engine/update-payload-key.pub.pem \"/${name}\" \"/${final_name}\"" || { rm -f "/sysroot/${final_name}" ; echo "Failing boot" >&2 ; exit 1; }
   true # Don't leak previous exit code as return code
 }
 
@@ -82,7 +52,6 @@ OEMID=$({ grep -m 1 -o "^ID=.*" /sysroot/oem/oem-release || true ; } | cut -d = 
 
 # The active-oem-OEMID file gets created by the update-engine postinst action if both old and new /usr partitions have a sysext
 if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; then
-  INITIAL_MVP="/oem/sysext/oem-${OEMID}-initial.raw"
   SYSEXT_OEM_PART="/oem/sysext/oem-${OEMID}-${VERSION}.raw"
   SYSEXT_ROOT_PART="/etc/flatcar/oem-sysext/oem-${OEMID}-${VERSION}.raw"
   SYMLINK="/sysroot/etc/extensions/oem-${OEMID}.raw"
@@ -111,38 +80,19 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
       echo "That failed, keeping it on root partition" >&2
       ACTIVE_OEM="${SYSEXT_ROOT_PART}"
     fi
-  elif [ -e "/sysroot/${INITIAL_MVP}" ]; then
-    # This is the initial MVP OEM sysext that is not bound to the OS version because
-    # at that time update support was missing.
-    # Like any other inactive sysext, it will be deleted by update-engine's post-inst action
-    # when it's not needed (i.e., the active and new inactive both have a versioned sysext)
-    ACTIVE_OEM="${INITIAL_MVP}"
   else
     echo "Did not find ${SYSEXT_OEM_PART} nor ${SYSEXT_ROOT_PART}, downloading" >&2
     systemctl start --quiet systemd-networkd systemd-resolved
     download_and_verify "oem-${OEMID}.raw"
-    # TODO: This can be removed once we download the update payload from update.release.flatcar-linux.net
-    # because it won't be the "initial" MVP sysext
-    mkdir -p /run/_oem
-    mount "/sysroot/oem-${OEMID}.raw" /run/_oem/
-    if grep -q SYSEXT_LEVEL=1.0 "/run/_oem/usr/lib/extension-release.d/extension-release.oem-${OEMID}" ; then
-      # The initial MVP OEM is only supported on the OEM partition
-      ACTIVE_OEM="${INITIAL_MVP}"
-    fi
-    umount "/sysroot/oem-${OEMID}.raw"
     mkdir -p /sysroot/oem/sysext/
-    if [ "${ACTIVE_OEM}" != "" ]; then
-      mv "/sysroot/oem-${OEMID}.raw" "/sysroot${ACTIVE_OEM}"
+    echo "Trying to place /sysroot/oem-${OEMID}.raw on OEM partition" >&2
+    if mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_OEM_PART}"; then
+      ACTIVE_OEM="${SYSEXT_OEM_PART}"
     else
-      echo "Trying to place /sysroot/oem-${OEMID}.raw on OEM partition" >&2
-      if mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_OEM_PART}"; then
-        ACTIVE_OEM="${SYSEXT_OEM_PART}"
-      else
-        echo "That failed, moving it to right location on root partition" >&2
-        mkdir -p /sysroot/etc/flatcar/oem-sysext/
-        mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_ROOT_PART}"
-        ACTIVE_OEM="${SYSEXT_ROOT_PART}"
-      fi
+      echo "That failed, moving it to right location on root partition" >&2
+      mkdir -p /sysroot/etc/flatcar/oem-sysext/
+      mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_ROOT_PART}"
+      ACTIVE_OEM="${SYSEXT_ROOT_PART}"
     fi
   fi
   if [ "${ACTIVE_OEM}" != "" ] && [ -e "/sysroot/${ACTIVE_OEM}" ]; then
@@ -180,6 +130,7 @@ for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysr
   ACTIVE_EXT="/etc/flatcar/sysext/flatcar-${NAME}-${VERSION}.raw"
   if [ ! -e "/sysroot/${ACTIVE_EXT}" ]; then
     echo "Did not find ${ACTIVE_EXT}" >&2
+    systemctl start --quiet systemd-networkd systemd-resolved
     download_and_verify "flatcar-${NAME}.raw"
     mv "/sysroot/flatcar-${NAME}.raw" "/sysroot/${ACTIVE_EXT}"
   fi
