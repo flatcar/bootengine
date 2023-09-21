@@ -60,7 +60,7 @@ if $(cmdline_bool flatcar.first_boot 0) || $(cmdline_bool coreos.first_boot 0); 
 
     # On EC2, shut down systemd-networkd if ignition fails so that the instance
     # fails EC2 instance checks.
-    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ec2" ]]; then
+    if [[ $(cmdline_arg flatcar.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ec2" ]] || [[ $(cmdline_arg coreos.oem.id) == "ami" ]] || [[ $(cmdline_arg flatcar.oem.id) == "ami" ]]; then
         mkdir -p ${UNIT_DIR}/systemd-networkd.service.d
         cat > ${UNIT_DIR}/systemd-networkd.service.d/10-conflict-emergency.conf <<EOF
 [Unit]
@@ -150,7 +150,7 @@ if [[ "${oem_id}" = "${oem_cmdline}" ]]; then
 fi
 
 # Ignition changed the platform name to "aws"
-if [ "${oem_cmdline}" = "ec2" ]; then
+if [ "${oem_cmdline}" = "ec2" ] || [ "${oem_cmdline}" = "ami" ]; then
   oem_cmdline="aws"
 fi
 
