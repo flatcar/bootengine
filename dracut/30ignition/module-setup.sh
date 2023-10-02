@@ -37,6 +37,7 @@ install() {
         mkswap \
         nvme \
         sgdisk \
+        partprobe \
         useradd \
         userdel \
         usermod \
