@@ -9,3 +9,6 @@ IPv6AcceptRA=true
 [DHCP]
 UseMTU=true
 UseDomains=true
+
+[DHCPv4]
+RoutesToDNS=false
