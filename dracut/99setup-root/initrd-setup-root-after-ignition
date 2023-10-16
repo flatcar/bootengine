@@ -77,6 +77,7 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     if mv "/sysroot/${SYSEXT_ROOT_PART}" /sysroot/oem/sysext/; then
       ACTIVE_OEM="${SYSEXT_OEM_PART}"
     else
+      rm -f "/sysroot${SYSEXT_OEM_PART}"
       echo "That failed, keeping it on root partition" >&2
       ACTIVE_OEM="${SYSEXT_ROOT_PART}"
     fi
@@ -89,6 +90,7 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
     if mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_OEM_PART}"; then
       ACTIVE_OEM="${SYSEXT_OEM_PART}"
     else
+      rm -f "/sysroot${SYSEXT_OEM_PART}"
       echo "That failed, moving it to right location on root partition" >&2
       mkdir -p /sysroot/etc/flatcar/oem-sysext/
       mv "/sysroot/oem-${OEMID}.raw" "/sysroot${SYSEXT_ROOT_PART}"
