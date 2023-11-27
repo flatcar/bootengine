@@ -143,3 +143,16 @@ for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysr
     rm -f "/sysroot/etc/extensions/flatcar-${NAME}.raw"
   fi
 done
+
+# The above mkdir runs when the /etc overlay is already set up and since overlayfs
+# creates any folders that don't exist in the lowerdir as opaque it means that when
+# they appear later in the lowerdir through an update, the lowerdir folder is ignored.
+# That happened in Beta when /etc/extensions wasn't present in /usr/share/flatcar/etc/.
+# Remove any opaque markers for directories created on boot. We don't create /etc/cni
+# here but it was also created later in boot and as a common folder it might be better
+# to have it non-opaque.
+for DIR in /sysroot/etc/extensions /sysroot/etc/flatcar /sysroot/etc/cni; do
+  if [ -d "${DIR}" ]; then
+    usrbin unshare -m sh -c "umount /sysroot/etc && /sysusr/usr/bin/attr -R -r overlay.opaque '${DIR}' || true"
+  fi
+done
