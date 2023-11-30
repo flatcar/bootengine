@@ -66,6 +66,17 @@ if [ -s /sysroot/selective-os-reset ]; then
   rm -f /sysroot/etc/machine-id
 fi
 
+# Remove any user-created whiteouts for files that have a tmpfiles
+# rule which normally would recreate them (we use the lowerdir for that).
+while IFS="" read -r entry ; do
+  entry="/sysroot${entry}"
+  # The -c check for character devs also guards against empty strings and nonexisting files
+  # The stat command prints the major and minor device type in decimal
+  if [ -c "${entry}" ] && [ "$(stat --printf='%Hr %Lr\n' "${entry}")" = "0 0" ]; then
+    rm "${entry}" || true
+  fi
+done < /sysroot/usr/share/flatcar/etc-no-whiteouts
+
 # This creates the modifiable users/groups in /sysroot/etc,
 # initializing the shadow database in the process. This needs to
 # happen early, so systemd-tmpfiles can read the user info from
