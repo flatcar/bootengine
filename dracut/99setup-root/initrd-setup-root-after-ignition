@@ -7,22 +7,19 @@ function usrbin() {
   LD_LIBRARY_PATH=/sysusr/usr/lib64 /sysusr/usr/bin/"${cmd}" "$@"
 }
 
-function usrcurl() {
-  usrbin curl -fsSL --retry-delay 1 --retry 60 --retry-connrefused --retry-max-time 60 --connect-timeout 20 "$@"
-}
-
+# Note: don't use as "if download_and_verify" or "download_and_verify || " because that disables set -e error handling
 function download_and_verify() {
   # Extracts release artifact to /sysroot/$final_name
   # Expects the env vars: FLATCAR_BOARD, VERSION
   local final_name="$1"
-  local name="${final_name/.raw/.gz}"
-  URL="https://update.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/${name}"
+  local extracted_name="${final_name}"
+  local name="${final_name/%.raw/.gz}"
+  local URL="https://update.release.flatcar-linux.net/${FLATCAR_BOARD}/${VERSION}/${name}"
   # Check for scripts:sdk_container/src/third_party/coreos-overlay/coreos-base/coreos-au-key/files/developer-v1.pub.pem
   if [ "$(usrbin md5sum /sysroot/usr/share/update_engine/update-payload-key.pub.pem | cut -d " " -f 1)" = "7192addf4a7f890c0057d21653eff2ea" ]; then
     URL="https://bincache.flatcar-linux.net/images/${FLATCAR_BOARD/-usr}/${VERSION}/flatcar_test_update-${name}"
+    extracted_name="flatcar_test_update-${final_name}"
   fi
-  # TODO: Replace the below with invoking an ue-rs helper binary for downloading the payload
-  # from the URL and write the unpacked, verified file to the final name.
   local COUNT=""
   # Workaround: Once curl starts and fails to resolve a DNS name (due to a race or temporary failure),
   # it sticks to it for each retry, making the retry pointless. Therefore, we first have to
@@ -33,9 +30,12 @@ function download_and_verify() {
     fi
     sleep 1
   done
-  rm -f "/sysroot/${name}"
-  usrcurl -o "/sysroot/${name}" "${URL}" || { rm -f "/sysroot/${name}" ; return 1 ; }
-  usrbin unshare -m sh -c "mount --rbind /dev /sysroot/dev/ && mount -t proc /proc /sysroot/proc/ && PROTOPATH=/usr/share/update_engine/ chroot /sysroot /usr/share/update_engine/decode_payload /usr/share/update_engine/update-payload-key.pub.pem \"/${name}\" \"/${final_name}\"" || { rm -f "/sysroot/${final_name}" ; echo "Failing boot" >&2 ; exit 1; }
+  local tempdir="/sysroot/ue-rs/"
+  rm -rf "${tempdir}"
+  mkdir -p "${tempdir}"
+  usrbin download_sysext -p /sysroot/usr/share/update_engine/update-payload-key.pub.pem -o "${tempdir}" -u "${URL}" || { rm -f "${tempdir}" ; echo "Failing boot" >&2 ; exit 1; }
+  mv "${tempdir}/${extracted_name}" "/sysroot/${final_name}"
+  rm -rf "${tempdir}"
   true # Don't leak previous exit code as return code
 }
 
