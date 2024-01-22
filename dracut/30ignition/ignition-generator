@@ -90,14 +90,8 @@ if [[ -z "${usr}" && -f /usr.squashfs ]]; then
     # PXE-booted system, with or without persistent root
     # (see 10diskless-generator)
     pxe=1
-    # Workaround, "chmod" is not available
-    cp -a /bin/cat /bin/is-live-image
-    printf '#!/bin/sh\nexit 0\n' > /bin/is-live-image
 else
     nopxe=1
-    # Workaround, "chmod" is not available
-    cp -a /bin/cat /bin/is-live-image
-    printf '#!/bin/sh\nexit 1\n' > /bin/is-live-image
     if $(cmdline_bool flatcar.first_boot 0) || $(cmdline_bool coreos.first_boot 0); then
         add_requires ignition-diskful.target ignition-complete.target
     else
@@ -138,30 +132,3 @@ fi
 if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]]; then
     add_requires flatcar-digitalocean-network.service initrd.target
 fi
-
-oem_id=metal
-if [[ $(systemd-detect-virt || true) =~ ^(kvm|qemu)$ ]]; then
-    oem_id=qemu
-fi
-
-oem_cmdline="$(cmdline_arg flatcar.oem.id ${oem_id})"
-if [[ "${oem_id}" = "${oem_cmdline}" ]]; then
-    oem_cmdline="$(cmdline_arg coreos.oem.id ${oem_id})"
-fi
-
-# Ignition changed the platform name to "aws"
-if [ "${oem_cmdline}" = "ec2" ]; then
-  oem_cmdline="aws"
-fi
-
-# Ignition changed the platform name to "gcp"
-if [ "${oem_cmdline}" = "gce" ]; then
-  oem_cmdline="gcp"
-fi
-
-# To maintain compatibility with eventual legacy 'flatcar.oem.id=pxe'
-if [ "${oem_cmdline}" = "pxe" ]; then
-  oem_cmdline="metal"
-fi
-
-{ echo "OEM_ID=${oem_cmdline}" ; echo "PLATFORM_ID=${oem_cmdline}" ; } > /run/ignition.env
