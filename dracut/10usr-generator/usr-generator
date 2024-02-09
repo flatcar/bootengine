@@ -80,8 +80,8 @@ if [[ "${usr}" != /* ]]; then
   cat >"${UNIT_DIR}/sysusr-usr.mount.d/10-norecovery.conf" <<EOF
 [Unit]
 DefaultDependencies=no
-Wants=systemd-tmpfiles-setup-dev.service
-After=systemd-udevd.service systemd-tmpfiles-setup-dev.service
+Wants=systemd-tmpfiles-setup-dev-early.service
+After=systemd-udevd.service systemd-tmpfiles-setup-dev-early.service
 [Mount]
 Options=${mount_usrflags}
 EOF
@@ -115,8 +115,8 @@ cat >"${UNIT_DIR}/sysusr-usr.mount" <<EOF
 SourcePath=/proc/cmdline
 Conflicts=initrd-switch-root.target
 DefaultDependencies=no
-Wants=systemd-tmpfiles-setup-dev.service
-After=systemd-udevd.service systemd-tmpfiles-setup-dev.service
+Wants=systemd-tmpfiles-setup-dev-early.service
+After=systemd-udevd.service systemd-tmpfiles-setup-dev-early.service
 
 [Mount]
 What=${usr}
