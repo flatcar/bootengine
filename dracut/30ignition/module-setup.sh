@@ -74,6 +74,10 @@ install() {
     inst_script "$moddir/ignition-setup.sh" \
         "/usr/sbin/ignition-setup"
 
+    # Flatcar: add ignition-setup-pre
+    inst_script "$moddir/ignition-setup-pre.sh" \
+        "/usr/sbin/ignition-setup-pre"
+
     # Rule to allow udev to discover unformatted encrypted devices
     inst_simple "$moddir/99-xx-ignition-systemd-cryptsetup.rules" \
         "/usr/lib/udev/rules.d/99-xx-ignition-systemd-cryptsetup.rules"
