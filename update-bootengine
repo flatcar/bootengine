@@ -29,11 +29,11 @@ DRACUT_ARGS=(
     --force
     --no-hostonly
     --no-compress
-    --omit i18n
     --omit lvm
     --omit multipath
     --omit network
     --add iscsi
+    --add i18n
     --add-drivers "loop brd drbd nbd rbd mmc_block xen-blkfront zram libarc4 lru_cache zsmalloc"
     )
 
