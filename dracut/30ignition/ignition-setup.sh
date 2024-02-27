@@ -12,8 +12,11 @@ normal)
     trap 'retry-umount "${src}"' EXIT
     ;;
 pxe)
-    # OEM directory in the initramfs itself
-    src=/oem
+    # OEM directory in the initramfs itself.
+    # Despite having the OEM partition being moved to
+    # /oem in general, we keep checking /usr/share/oem in initrds to avoid
+    # breaking compatibility.
+    src=/usr/share/oem
     ;;
 *)
     echo "Usage: $0 {normal|pxe}" >&2
