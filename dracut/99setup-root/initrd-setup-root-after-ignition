@@ -134,6 +134,10 @@ for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysr
     echo "Did not find ${ACTIVE_EXT}" >&2
     systemctl start --quiet systemd-networkd systemd-resolved
     download_and_verify "flatcar-${NAME}.raw"
+    # Note: This folder is created opaque since it does not exist in the underlay
+    # For cases where we ship it later, it's best to add a "attr" call in flatcar-postinst
+    # because there are many ways how the folder might have been created
+    mkdir -p "/sysroot/etc/flatcar/sysext/"
     mv "/sysroot/flatcar-${NAME}.raw" "/sysroot/${ACTIVE_EXT}"
   fi
   if [ -e "/sysroot/${ACTIVE_EXT}" ]; then
