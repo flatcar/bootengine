@@ -33,6 +33,7 @@ DRACUT_ARGS=(
     --omit lvm
     --omit multipath
     --omit network
+    --omit zfs
     --add iscsi
     --add-drivers "loop brd drbd nbd rbd mmc_block xen-blkfront zram libarc4 lru_cache zsmalloc"
     )
