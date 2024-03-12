@@ -129,12 +129,58 @@ install() {
     # Flatcar: add 66-azure-storage.rules and 90-cloud-storage.rules
     inst_rules 60-cdrom_id.rules 66-azure-storage.rules 90-cloud-storage.rules
 
-    # Flatcar: add wrappers for Ignition and coreos-metadata (afterburn)
-    # which rely on the earlier /sysusr/usr mount
-    inst_script "$moddir/coreos-metadata-wrapper" \
-        "/usr/bin/coreos-metadata"
-    inst_script "$moddir/ignition-wrapper" \
-        "/usr/bin/ignition"
-    inst_script "$moddir/setfiles-wrapper" \
-        "/usr/bin/setfiles"
+    # Flatcar: add symlinks for dependencies of Ignition, coreos-metadata (afterburn), and 
+    # Clevis. This saves space in the initramfs image by replacing files with symlinks to
+    # the previously mounted /sysusr/.
+    for executable in \
+        /usr/bin/clevis-decrypt-sss \
+        /usr/bin/clevis-decrypt-tang \
+        /usr/bin/clevis-decrypt-tpm2 \
+        /usr/bin/clevis-decrypt \
+        /usr/bin/clevis-encrypt-sss \
+        /usr/bin/clevis-encrypt-tang \
+        /usr/bin/clevis-encrypt-tpm2 \
+        /usr/bin/clevis-luks-bind \
+        /usr/bin/clevis-luks-common-functions \
+        /usr/bin/clevis-luks-list \
+        /usr/bin/clevis-luks-unlock \
+        /usr/bin/clevis \
+        /usr/bin/coreos-metadata \
+        /usr/bin/curl \
+        /usr/bin/ignition \
+        /usr/bin/jose \
+        /usr/bin/luksmeta \
+        /usr/bin/mktemp \
+        /usr/bin/pwmake \
+        /usr/bin/sort \
+        /usr/bin/tail \
+        /usr/bin/tpm2_createprimary \
+        /usr/bin/tpm2_create \
+        /usr/bin/tpm2_flushcontext \
+        /usr/bin/tpm2_load \
+        /usr/bin/tpm2_pcrlist \
+        /usr/bin/tpm2_pcrread \
+        /usr/bin/tpm2_unseal \
+        /usr/lib/systemd-reply-password \
+        /usr/local/libexec/clevis-luks-askpass \
+        /usr/libexec/clevis-luks-generic-unlocker \
+        /usr/sbin/setfiles \
+    ; do
+        directory="$(dirname "$executable")"
+        filename="$(basename "$executable")"
+
+        wrapper_name="${filename}-wrapper"
+        cat <<EOF > /tmp/${filename}-wrapper
+#!/bin/sh
+
+LD_LIBRARY_PATH=/sysusr/usr/lib64 exec "/sysusr${executable}" "\$@"
+EOF
+        chmod +x /tmp/${filename}-wrapper
+
+        inst_script "/tmp/${filename}-wrapper" \
+            "/usr/bin/$filename"
+            
+        rm /tmp/${filename}-wrapper
+    done
+
 }
