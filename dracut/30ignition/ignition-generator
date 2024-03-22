@@ -146,6 +146,6 @@ if [ "${nopxe}" = 1 ]; then
     add_requires "disk-uuid.service" initrd.target
 fi
 
-if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]]; then
+if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg flatcar.oem.id) == "proxmoxve" ]]; then
     add_requires flatcar-digitalocean-network.service initrd.target
 fi
