@@ -33,6 +33,7 @@ ConditionKernelCommandLine=|flatcar.oem.id=vultr
 # Addition:
 ConditionKernelCommandLine=|coreos.oem.id=packet
 ConditionKernelCommandLine=|flatcar.oem.id=packet
+ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
 
 OnFailure=emergency.target
 OnFailureJobMode=isolate
