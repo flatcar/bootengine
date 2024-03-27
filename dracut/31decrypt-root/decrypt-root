@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+# Check if there is a partition labeled ROOT and, if so, determine its UUID.
+match=$(lsblk --noheadings -o UUID,PARTLABEL | { grep -m1 -w ROOT || true ; })
+if [[ "${match}" = "" ]]; then
+    exit 0
+fi
+uuid="${match%% *}"
+
+# Check if the partition labeled ROOT is a LUKS device.
+IFS= read -r -n "4" header < /dev/disk/by-uuid/$uuid
+if [[ "$header" != "LUKS" ]]; then
+    exit 0
+fi
+
+# Generate a systemd-cryptsetup unit to decrypt the root partition.
+# We call the LUKS device `rootencrypted`, no matter what it was called in the Ignition configuration.
+echo "rootencrypted UUID=$uuid none luks,tpm2-device=auto" > /tmp/crypttab
+SYSTEMD_CRYPTTAB=/tmp/crypttab /usr/lib/systemd/system-generators/systemd-cryptsetup-generator /etc/systemd/system/
+
+# Start the generated systemd service to decrypt the root partition.
+systemctl start systemd-cryptsetup@rootencrypted
