@@ -18,3 +18,8 @@ install() {
     inst_simple "$moddir/no-job-timeout.conf" \
         "$systemdsystemunitdir/dev-mapper-usr.device.d/no-job-timeout.conf"
 }
+
+installkernel() {
+    # required by cryptsetup, it seems like it stopped being implicitly inserted
+    instmods -c dm_verity
+}

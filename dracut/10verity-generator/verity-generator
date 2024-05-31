@@ -74,6 +74,9 @@ if [[ -n "${usr}" && -n "${usrhash}" ]]; then
 	[Service]
 	Type=oneshot
 	RemainAfterExit=yes
+	# Explicitly load dm_verity module - for some reason it stopped being
+	# loaded earlier in the boot, and cryptsetup needs it.
+	ExecStart=/bin/modprobe dm_verity
 	# Try to query the filesystem size dynamically but otherwise fall back to the expected value from the image GPT layout
 	ExecStart=/bin/sh -c '/sbin/veritysetup --panic-on-corruption --hash-offset="\$(e2size ${usr} || echo 1065345024)" open "${usr}" usr "${usr}" "${usrhash}"'
 	# If there's a hash mismatch during table initialization,
