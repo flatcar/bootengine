@@ -147,5 +147,5 @@ if [ "${nopxe}" = 1 ]; then
 fi
 
 if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg flatcar.oem.id) == "proxmoxve" ]]; then
-    add_requires flatcar-digitalocean-network.service initrd.target
+    add_requires flatcar-afterburn-network.service initrd.target
 fi

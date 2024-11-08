@@ -99,14 +99,14 @@ install() {
     done
 
     # Flatcar: add ignition-quench.service, sysroot-boot.service,
-    # flatcar-digitalocean-network.service, flatcar-static-network.service,
+    # flatcar-afterburn-network.service, flatcar-static-network.service,
     # flatcar-metadata-hostname.service, flatcar-openstack-hostname.service
     inst_simple "$moddir/ignition-quench.service" \
         "$systemdsystemunitdir/ignition-quench.service"
     inst_simple "$moddir/sysroot-boot.service" \
         "$systemdsystemunitdir/sysroot-boot.service"
-    inst_simple "$moddir/flatcar-digitalocean-network.service" \
-        "$systemdsystemunitdir/flatcar-digitalocean-network.service"
+    inst_simple "$moddir/flatcar-afterburn-network.service" \
+        "$systemdsystemunitdir/flatcar-afterburn-network.service"
     inst_simple "$moddir/flatcar-static-network.service" \
         "$systemdsystemunitdir/flatcar-static-network.service"
     inst_simple "$moddir/flatcar-metadata-hostname.service" \
