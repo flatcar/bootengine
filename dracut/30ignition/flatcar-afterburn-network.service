@@ -1,5 +1,5 @@
 [Unit]
-Description=Flatcar DigitalOcean Network Agent
+Description=Flatcar Afterburn network service
 DefaultDependencies=false
 Before=initrd.target
 After=systemd-networkd.service initrd-root-fs.target
