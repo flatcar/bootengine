@@ -3,6 +3,11 @@
 
 set -e
 
+# remount read write for Ignition required steps
+mount -o remount,rw /usr
+# remount read only after Ignition required steps finalized
+trap 'mount -o remount,ro /usr' EXIT
+
 case "$1" in
 normal)
     src=/mnt/oem
