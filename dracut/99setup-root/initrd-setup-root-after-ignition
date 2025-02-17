@@ -99,7 +99,9 @@ if [ "${OEMID}" != "" ] && [ -e "/sysroot/oem/sysext/active-oem-${OEMID}" ]; the
   fi
   if [ "${ACTIVE_OEM}" != "" ] && [ -e "/sysroot/${ACTIVE_OEM}" ]; then
     mkdir -p "/sysroot/etc/extensions"
-    ln -fs "${ACTIVE_OEM}" "${SYMLINK}"
+    if [ "${ACTIVE_OEM}" != "$(readlink "${SYMLINK}")" ]; then
+      ln -fs "${ACTIVE_OEM}" "${SYMLINK}"
+    fi
   else
     rm -f "${SYMLINK}"
   fi
