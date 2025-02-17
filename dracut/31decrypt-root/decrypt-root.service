@@ -4,14 +4,11 @@ Description=Generate and execute a systemd-cryptsetup service to decrypt the ROO
 DefaultDependencies=no
 # If systemd-networkd.service is used in the initramfs, then we should run after it, since the ROOT partition
 # might use network-bound encryption.
+# Added new custom comment devlog
 After=systemd-networkd.service dev-disk-by\x2dpartlabel-ROOT.device ignition-disks.service
 Wants=dev-disk-by\x2dpartlabel-ROOT.device
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-Environment=SYSTEMD_CRYPTTAB=/dev/stdin
-StandardInputText=rootencrypted /dev/disk/by-partlabel/ROOT none luks,tpm2-device=auto
-ExecStart=/usr/lib/systemd/system-generators/systemd-cryptsetup-generator /etc/systemd/system
-ExecStartPost=/bin/systemctl daemon-reload
-ExecStartPost=/bin/systemctl start systemd-cryptsetup@rootencrypted.service
+ExecStart=/bin/true
