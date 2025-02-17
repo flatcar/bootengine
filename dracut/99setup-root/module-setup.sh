@@ -7,7 +7,7 @@ depends() {
 }
 
 install() {
-    inst_multiple chroot grep ldconfig mountpoint systemd-tmpfiles flatcar-tmpfiles realpath
+    inst_multiple chroot findmnt grep ldconfig mountpoint systemd-tmpfiles flatcar-tmpfiles realpath
 
     inst_script "${moddir}/initrd-setup-root" \
 	        "/sbin/initrd-setup-root"

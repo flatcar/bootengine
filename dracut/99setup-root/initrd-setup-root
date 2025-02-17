@@ -160,8 +160,14 @@ if [ ! -e "/sysroot/etc/.no-dup-update" ]; then
 fi
 
 # Set up overlay mount for /etc (as long as we can't use syscfg for that)
-mkdir -p /sysroot/.etc-work
-mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc,upperdir=/sysroot/etc,workdir=/sysroot/.etc-work,redirect_dir=on,metacopy=off,noatime /sysroot/etc
+# Check if /sysroot is mounted read-only using findmnt
+if findmnt -n -o OPTIONS /sysroot | grep -qw ro; then
+    # /sysroot is read-only: mount with combined lowerdir, no upperdir/workdir
+    mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc:/sysroot/etc,redirect_dir=on,metacopy=off,noatime /sysroot/etc
+else
+    mkdir -p /sysroot/.etc-work
+    mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc,upperdir=/sysroot/etc,workdir=/sysroot/.etc-work,redirect_dir=on,metacopy=off,noatime /sysroot/etc
+fi
 
 # PXE initrds may provide OEM. Despite OEM partition being moved to
 # /oem in general, we keep checking /usr/share/oem in initrds to avoid
