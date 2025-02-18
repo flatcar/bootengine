@@ -53,6 +53,11 @@ do
 done
 
 # trim the leading and trailing whitespace
+immutable_mode=0
+if [[ "${kernelopts}" == *"flatcar.immutable=1"* ]]; then
+    kernelopts="${kernelopts}rootflags=ro "
+    immutable_mode=1
+fi
 kernelopts="$(echo "$kernelopts" | sed -e 's,^[[:space:]]*,,' -e 's,[[:space:]]*$,,')"
 
 # only apply the changes & reboot if changes have been made
@@ -62,12 +67,15 @@ if [[ "$kernelopts" != "$orig_kernelopts" ]]; then
     # write out a single one to replace them
     echo "set linux_append=\"\$linux_append $kernelopts\"" >> $grubcfg
 
-    # set the first-boot flag file to make sure Ignition runs again on the next boot (e.g., when a manual first boot was forced in the GRUB menu)
     bootmnt=/mnt/boot_partition
     mkdir -p ${bootmnt}
     bootdev=/dev/disk/by-label/EFI-SYSTEM
     mount -o rw ${bootdev} ${bootmnt}
-    echo > "${bootmnt}/flatcar/first_boot"
-
-    systemctl reboot --force
+    if [[ "$immutable_mode" == 0 ]]; then
+        # set the first-boot flag file to make sure Ignition runs again on the next boot (e.g., when a manual first boot was forced in the GRUB menu)
+        echo > "${bootmnt}/flatcar/first_boot"
+        systemctl reboot --force
+    else
+        echo > "${bootmnt}/flatcar/immutable"
+    fi
 fi

@@ -1,6 +1,7 @@
 [Unit]
 Description=Ignition (record completion)
 DefaultDependencies=false
+Wants=ignition-late-kargs-reboot.service
 Before=initrd.target
 
 Requires=ignition-disks.service

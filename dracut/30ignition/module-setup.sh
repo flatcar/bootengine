@@ -116,6 +116,8 @@ install() {
         "$systemdsystemunitdir/flatcar-metadata-hostname.service"
     inst_simple "$moddir/flatcar-openstack-hostname.service" \
         "$systemdsystemunitdir/flatcar-openstack-hostname.service"
+    inst_simple "$moddir/ignition-late-kargs-reboot.service" \
+        "$systemdsystemunitdir/ignition-late-kargs-reboot.service"
 
     install_ignition_unit ignition-fetch.service
     install_ignition_unit ignition-fetch-offline.service

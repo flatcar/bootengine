@@ -1,0 +1,14 @@
+[Unit]
+ConditionPathExists=/sysroot/boot/flatcar/immutable
+DefaultDependencies=false
+Before=initrd.target
+
+Requires=initrd-setup-root.service initrd-setup-root-after-ignition.service
+After=initrd-setup-root.service initrd-setup-root-after-ignition.service ignition-quench.service
+
+Requires=sysroot-boot.service
+After=sysroot-boot.service
+
+[Service]
+Type=oneshot
+ExecStart=systemctl reboot --force
