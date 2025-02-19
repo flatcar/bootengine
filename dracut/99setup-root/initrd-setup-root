@@ -90,18 +90,27 @@ for DBFILE in passwd group shadow gshadow; do
     rm -f "/sysroot/etc/${DBFILE}"
   fi
 done
-/usr/sbin/flatcar-tmpfiles /sysroot
 
-# Initialize base filesystem without /etc
-# Don't run all tmpfiles rules but only the essential ones
-# required to let systemd do its work correctly
-# (baselayout.conf must contain /var/log/journal for it to
-# be created early enough, base_image_var.conf has other
-# directories that packages installed). The rest will be
-# done later as usual through systemd-tmpfiles-setup.service.
-systemd-tmpfiles --root=/sysroot --create \
-    baselayout.conf baselayout-usr.conf \
-    baselayout-home.conf base_image_var.conf
+immutableroot() {
+  findmnt -n -o OPTIONS /sysroot | grep -qw ro
+}
+initnonetctmpfiles() {
+  # Initialize base filesystem without /etc
+  # Don't run all tmpfiles rules but only the essential ones
+  # required to let systemd do its work correctly
+  # (baselayout.conf must contain /var/log/journal for it to
+  # be created early enough, base_image_var.conf has other
+  # directories that packages installed). The rest will be
+  # done later as usual through systemd-tmpfiles-setup.service.
+  systemd-tmpfiles --root=/sysroot --create \
+      baselayout.conf baselayout-usr.conf \
+      baselayout-home.conf base_image_var.conf
+}
+
+if ! immutableroot ; then
+  /usr/sbin/flatcar-tmpfiles /sysroot
+  initnonetctmpfiles
+fi
 
 # Remove our phony id. systemd will initialize this during boot.
 if grep -qs "${COREOS_BLANK_MACHINE_ID}" "${MACHINE_ID_FILE}"; then
@@ -161,9 +170,10 @@ fi
 
 # Set up overlay mount for /etc (as long as we can't use syscfg for that)
 # Check if /sysroot is mounted read-only using findmnt
-if findmnt -n -o OPTIONS /sysroot | grep -qw ro; then
+if immutableroot ; then
     # /sysroot is read-only: mount with combined lowerdir, no upperdir/workdir
     mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc:/sysroot/etc,redirect_dir=on,metacopy=off,noatime /sysroot/etc
+    initnonetctmpfiles
 else
     mkdir -p /sysroot/.etc-work
     mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc,upperdir=/sysroot/etc,workdir=/sysroot/.etc-work,redirect_dir=on,metacopy=off,noatime /sysroot/etc
