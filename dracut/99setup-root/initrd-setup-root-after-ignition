@@ -149,3 +149,55 @@ for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysr
     rm -f "/sysroot/etc/extensions/flatcar-${NAME}.raw"
   fi
 done
+
+formatuuid() {
+  local uuid="$1"
+  echo "${uuid:0:8}-${uuid:8:4}-${uuid:12:4}-${uuid:16:4}-${uuid:20:12}"
+}
+splitroothash() {
+  local uuid="$1"
+  echo "${uuid:0:32}" "${uuid:32:32}"
+}
+getdriveandpart() {
+  local dev="$1"
+  dev="${dev#/dev/}"
+  part=$(<"/sys/class/block/${dev}/partition")
+  dev=$(basename $(readlink -f "/sys/class/block/${dev}/.."))
+  echo "$dev" "$part"
+}
+setuuid() {
+  local dev="$1"
+  local uuid="$2"
+  arr=( $(getdriveandpart "${dev}") )
+  local dev="/dev/${arr[0]}"
+  local part="${arr[1]}"
+  cgpt add -i "${part}" -u "${uuid}" "${dev}"
+}
+
+if [ -e /sysroot/boot/flatcar/immutable ]; then
+  mount -o remount,ro /sysroot
+  rootdev=$(findmnt -n -o SOURCE --target /sysroot)
+  if [ -e /dev/disk/by-partlabel/ROOTVERITY ]; then
+    veritydev=$(readlink -f /dev/disk/by-partlabel/ROOTVERITY)
+    veritysetup format --root-hash-file=/run/roothash "${rootdev}" "${veritydev}"
+    uuid=$(</run/roothash)
+    uuidsplit=( $(splitroothash "${uuid}") )
+    rootuuid="$(formatuuid "${uuidsplit[0]}" )"
+    hashuuid="$(formatuuid "${uuidsplit[1]}" )"
+    setuuid "${rootdev}" "${rootuuid}"
+    setuuid "${veritydev}" "${hashuuid}"
+
+    sed \
+      -i \
+      -e 's|set linux_append="\([^"]*\)|set linux_append="\1 '"roothash=$uuid"'|' \
+      -e '$a set linux_root="root=/dev/mapper/root"' \
+     /sysroot/oem/grub.cfg
+
+    echo "Prepared rootfs verity"
+
+  else
+    echo "Readonly rootfs but no verity partition"
+  fi
+else
+  echo "Mutable rootfs"
+fi
