@@ -3,7 +3,7 @@
 # ex: ts=8 sw=4 sts=4 et filetype=sh
 
 depends() {
-    echo systemd
+    echo systemd systemd-veritysetup
 }
 
 install() {
