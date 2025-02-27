@@ -5,16 +5,14 @@ set -e
 
 # remount read write for Ignition required steps
 mount -o remount,rw /usr
-# remount read only after Ignition required steps finalized
-trap 'mount -o remount,ro /usr' EXIT
+# we run with MountFlags=slave, so the rw remount is not propagated outside the
+# unit - no need to remount ro or umount the OEM partition
 
 case "$1" in
 normal)
     src=/mnt/oem
     mkdir -p "${src}"
     mount /dev/disk/by-label/OEM "${src}"
-    # retry-umount may not be necessary, but be cautious
-    trap 'retry-umount "${src}"' EXIT
     # Workaround, "chmod" is not available
     cp -a /bin/cat /bin/is-live-image
     printf '#!/bin/sh\nexit 1\n' > /bin/is-live-image
