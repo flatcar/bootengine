@@ -137,6 +137,7 @@ OnFailureJobMode=isolate
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+MountFlags=slave
 ExecStart=/usr/sbin/ignition-setup ${nopxe:+normal} ${pxe:+pxe}
 EOF
 
