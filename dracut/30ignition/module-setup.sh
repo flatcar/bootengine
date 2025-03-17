@@ -58,6 +58,8 @@ install() {
         clevis-luks-common-functions \
         clevis-luks-unlock \
         pwmake \
+        sort \
+        tail \
         tpm2_create
 
     # Required by s390x's z/VM installation.
@@ -93,6 +95,7 @@ install() {
     inst_simple "$moddir/ignition-generator" \
         "$systemdutildir/system-generators/ignition-generator"
 
+    local x
     for x in "complete" "subsequent" "diskful" "diskful-subsequent"; do
         inst_simple "$moddir/ignition-$x.target" \
             "$systemdsystemunitdir/ignition-$x.target"
@@ -129,58 +132,36 @@ install() {
     # Flatcar: add 66-azure-storage.rules and 90-cloud-storage.rules
     inst_rules 60-cdrom_id.rules 66-azure-storage.rules 90-cloud-storage.rules
 
-    # Flatcar: add symlinks for dependencies of Ignition, coreos-metadata (afterburn), and 
+    # Flatcar: add symlinks for dependencies of Ignition, coreos-metadata (afterburn), and
     # Clevis. This saves space in the initramfs image by replacing files with symlinks to
     # the previously mounted /sysusr/.
-    for executable in \
-        /usr/bin/clevis-decrypt-sss \
-        /usr/bin/clevis-decrypt-tang \
-        /usr/bin/clevis-decrypt-tpm2 \
-        /usr/bin/clevis-decrypt \
-        /usr/bin/clevis-encrypt-sss \
-        /usr/bin/clevis-encrypt-tang \
-        /usr/bin/clevis-encrypt-tpm2 \
-        /usr/bin/clevis-luks-bind \
-        /usr/bin/clevis-luks-common-functions \
-        /usr/bin/clevis-luks-list \
-        /usr/bin/clevis-luks-unlock \
-        /usr/bin/clevis \
-        /usr/bin/coreos-metadata \
-        /usr/bin/curl \
-        /usr/bin/ignition \
-        /usr/bin/jose \
-        /usr/bin/luksmeta \
-        /usr/bin/mktemp \
-        /usr/bin/pwmake \
-        /usr/bin/sort \
-        /usr/bin/tail \
-        /usr/bin/tpm2_createprimary \
-        /usr/bin/tpm2_create \
-        /usr/bin/tpm2_flushcontext \
-        /usr/bin/tpm2_load \
-        /usr/bin/tpm2_pcrlist \
-        /usr/bin/tpm2_pcrread \
-        /usr/bin/tpm2_unseal \
-        /usr/lib/systemd-reply-password \
-        /usr/local/libexec/clevis-luks-askpass \
-        /usr/libexec/clevis-luks-generic-unlocker \
-        /usr/sbin/setfiles \
-    ; do
-        directory="$(dirname "$executable")"
-        filename="$(basename "$executable")"
+    local executable
+    for executable in "${dracutsysrootdir}"{\
+/usr/bin/clevis*,\
+/usr/bin/coreos-metadata,\
+/usr/bin/curl,\
+/usr/bin/ignition,\
+/usr/bin/jose,\
+/usr/bin/luksmeta,\
+/usr/bin/tpm2,\
+/usr/lib/systemd/systemd-reply-password,\
+/usr/libexec/clevis*\
+}; do
+        if [[ ! -f ${executable} ]]; then
+            dfatal "Cannot create wrapper for ${executable} because it is not found"
+            exit 1
+        elif [[ ! -x ${executable} ]]; then
+            continue
+        fi
 
-        wrapper_name="${filename}-wrapper"
-        cat <<EOF > /tmp/${filename}-wrapper
+        local wrapper="${DRACUT_TMPDIR}/${executable##*/}-wrapper"
+        cat <<EOF > "${wrapper}"
 #!/bin/sh
-
-LD_LIBRARY_PATH=/sysusr/usr/lib64 exec "/sysusr${executable}" "\$@"
+LD_LIBRARY_PATH=/sysusr/usr/lib64 exec "/sysusr${executable#"$dracutsysrootdir"}" "\$@"
 EOF
-        chmod +x /tmp/${filename}-wrapper
-
-        inst_script "/tmp/${filename}-wrapper" \
-            "/usr/bin/$filename"
-            
-        rm /tmp/${filename}-wrapper
+        chmod +x "${wrapper}"
+        inst_script "${wrapper}" "${executable#"$dracutsysrootdir"}"
+        rm "${wrapper}"
     done
 
 }
