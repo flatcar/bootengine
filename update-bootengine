@@ -36,6 +36,7 @@ DRACUT_ARGS=(
     --add iscsi
     --add i18n
     --add-drivers "loop brd drbd nbd rbd mmc_block xen-blkfront zram libarc4 lru_cache zsmalloc"
+    --kernel-cmdline "SYSTEMD_SULOGIN_FORCE=1"
     )
 
 SETUP_MOUNTS=
