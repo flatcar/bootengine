@@ -15,6 +15,9 @@ install() {
         $systemdsystemunitdir/systemd-resolved.service \
         /etc/systemd/resolved.conf
 
+    inst_multiple \
+        "$systemdnetwork"/{20-calico-tunl0,50-veth,98-{gce-coreos-virtio,gce-virtio,virtio}}.link
+
     inst_simple "$moddir/network-cleanup.service" \
         "$systemdsystemunitdir/network-cleanup.service"
 
@@ -28,19 +31,19 @@ install() {
         "$systemdsystemunitdir/systemd-resolved.service.d/10-nodeps.conf"
 
     inst_simple "$moddir/yy-azure-sriov.network" \
-        "$systemdutildir/network/yy-azure-sriov.network"
+        "$systemdnetwork/yy-azure-sriov.network"
 
     inst_simple "$moddir/yy-digitalocean.network" \
-        "$systemdutildir/network/yy-digitalocean.network"
+        "$systemdnetwork/yy-digitalocean.network"
 
     inst_simple "$moddir/yy-netroot.network" \
-        "$systemdutildir/network/yy-netroot.network"
+        "$systemdnetwork/yy-netroot.network"
 
     inst_simple "$moddir/yy-pxe.network" \
-        "$systemdutildir/network/yy-pxe.network"
+        "$systemdnetwork/yy-pxe.network"
 
     inst_simple "$moddir/zz-default.network" \
-        "$systemdutildir/network/zz-default.network"
+        "$systemdnetwork/zz-default.network"
 
     # add a hook to generate networkd configuration from ip= arguments
     inst_hook cmdline 99 "$moddir/parse-ip-for-networkd.sh"
