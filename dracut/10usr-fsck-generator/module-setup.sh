@@ -7,7 +7,7 @@ depends() {
 }
 
 install() {
-    dracut_install tr
+    inst_multiple tr
     inst_simple "$moddir/usr-fsck-generator" \
         "$systemdutildir/system-generators/usr-fsck-generator"
 }
