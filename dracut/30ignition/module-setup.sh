@@ -164,6 +164,9 @@ EOF
         rm "${wrapper}"
     done
 
+    # Ensure /sysusr/usr is mounted before decrypting root.
+    inst_simple "$moddir/sysusr-usr-revdeps.conf" \
+        "$systemdsystemunitdir/systemd-cryptsetup@rootencrypted.service.d/sysusr-usr.conf"
 }
 
 # See: https://github.com/coreos/ignition/commit/d304850c3d3696822bc05e0833ee4b27df9d7a38
