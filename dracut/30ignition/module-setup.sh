@@ -13,7 +13,7 @@ install_ignition_unit() {
     local instantiated="${1:-$unit}"; shift
     inst_simple "$moddir/$unit" "$systemdsystemunitdir/$unit"
     mkdir -p "$initdir/$systemdsystemunitdir/$target.requires"
-    ln_r "../$unit" "$systemdsystemunitdir/$target.requires/$instantiated"
+    ln -sfn "../$unit" "$initdir/$systemdsystemunitdir/$target.requires/$instantiated"
 }
 
 install() {
