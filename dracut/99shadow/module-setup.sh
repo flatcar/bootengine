@@ -5,15 +5,8 @@
 install() {
     # Simply pull in all the shadow db files so things like systemd-tmpfiles
     # will always be able to find users referenced by the baselayout files.
-    cp -af "/usr/share/baselayout/passwd" \
-        "${initdir}/etc/passwd"
-
-    cp -af "/usr/share/baselayout/shadow" \
-        "${initdir}/etc/shadow"
-
-    cp -af "/usr/share/baselayout/group" \
-        "${initdir}/etc/group"
-
-    cp -af "/usr/share/baselayout/gshadow" \
-        "${initdir}/etc/gshadow"
+    inst_simple /usr/share/baselayout/passwd  /etc/passwd
+    inst_simple /usr/share/baselayout/shadow  /etc/shadow
+    inst_simple /usr/share/baselayout/group   /etc/group
+    inst_simple /usr/share/baselayout/gshadow /etc/gshadow
 }
