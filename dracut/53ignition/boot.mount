@@ -1,0 +1,8 @@
+[Unit]
+Description=Boot partition
+DefaultDependencies=no
+
+[Mount]
+What=/dev/disk/by-label/EFI-SYSTEM
+Where=/boot
+Type=vfat
