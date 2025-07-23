@@ -38,7 +38,7 @@ usrflags=$(cmdline_arg usrflags ro)
 if [[ "$(echo ",${usrflags}," | grep -v -F ',ro,')" != "" ]]; then
   true # Don't set "norecovery" when mounting rw
 else
-  usrflags="${usrflags},norecovery"
+  usrflags="${usrflags},rescue=nologreplay"
 fi
 
 case "${usr}" in
@@ -74,7 +74,7 @@ if [[ "${usr}" != /* ]]; then
     # Don't set "norecovery" when mounting rw
     exit 0
   fi
-  mount_usrflags="${mount_usrflags},norecovery"
+  mount_usrflags="${mount_usrflags},rescue=nologreplay"
   # sysroot-usr.mount is a bind mount from /sysusr/usr
   mkdir -p "${UNIT_DIR}/sysusr-usr.mount.d"
   cat >"${UNIT_DIR}/sysusr-usr.mount.d/10-norecovery.conf" <<EOF
