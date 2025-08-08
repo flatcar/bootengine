@@ -33,7 +33,7 @@ function download_and_verify() {
   local tempdir="/sysroot/ue-rs/"
   rm -rf "${tempdir}"
   mkdir -p "${tempdir}"
-  usrbin download_sysext -p /sysroot/usr/share/update_engine/update-payload-key.pub.pem -o "${tempdir}" -u "${URL}" || { rm -f "${tempdir}" ; echo "Failing boot" >&2 ; exit 1; }
+  usrbin download_sysext -p /sysroot/usr/share/update_engine/update-payload-key.pub.pem -o "${tempdir}" -u "${URL}" || { rm -rf "${tempdir}" ; echo "Failing boot" >&2 ; exit 1; }
   mv "${tempdir}/${extracted_name}" "/sysroot/${final_name}"
   rm -rf "${tempdir}"
   true # Don't leak previous exit code as return code
