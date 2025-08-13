@@ -144,6 +144,8 @@ install() {
 /usr/bin/jose,\
 /usr/bin/luksmeta,\
 /usr/bin/tpm2,\
+/usr/bin/xfs_db,\
+/usr/bin/xfs_repair,\
 /usr/lib/systemd/systemd-reply-password,\
 /usr/libexec/clevis*\
 }; do
