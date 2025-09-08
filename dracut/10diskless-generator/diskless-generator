@@ -2,6 +2,10 @@
 # -*- mode: shell-script; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
 # ex: ts=8 sw=4 sts=4 et filetype=sh
 
+# NOTE: The /usr.squashfs mounting for /sysusr is done in /minimal-init
+# (making the mount unit here a no-op) but the /sysroot mounting is
+# and must still be done here, same for the rootfs RAM setup
+
 set -e
 
 UNIT_DIR="${1:-/tmp}"

@@ -4,6 +4,11 @@
 
 # This script generates a service that manages a dm-verity device for the chosen USR partition
 
+# NOTE: The verity setup is now done in /minimal-init and this logic not used:
+exit 0
+# (We could also delete this file but once most users have a large /boot partition we can also
+# come back to a state where we have one initrd)
+
 set -e
 
 UNIT_DIR="${1:-/tmp}"

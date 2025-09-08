@@ -10,6 +10,9 @@
 # by systemd-fstab-generator. This module is only needed for old
 # bootloaders that pass usr=.
 
+# NOTE: Now done in /minimal-init but since the "mount.usr" generator also runs,
+# it seems ok to also keep the "usr" generator even though the mount units are
+# a no-op
 set -e
 
 UNIT_DIR="${1:-/tmp}"
