@@ -1,0 +1,196 @@
+#!/bin/sh
+set -u
+busybox mount -n -t proc proc /proc
+busybox mount -n -t devtmpfs devtmpfs /dev
+busybox mount -n -t sysfs sysfs /sys
+busybox --install -s
+if [ ! -x "/dev/pts" ]; then mkdir /dev/pts; fi
+if [ ! -x "/dev/shm" ]; then mkdir /dev/shm; fi
+busybox mount -n -t devpts devpts /dev/pts -o gid=5,mode=620,ptmxmode=000
+
+cmdline_arg() {
+  local name="$1"
+  local value="${2-}"
+  for arg in $(cat /proc/cmdline); do
+    if [[ "${arg%%=*}" == "${name}" ]]; then
+      value="${arg#*=}"
+    fi
+  done
+  echo "${value}"
+}
+
+emergency() {
+  echo "ERROR: The early initrd has failed. To activate debug shell breakpoints, boot with rd.earlyshell in the kernel cmdline, and to activate tracing, boot with rd.earlytrace" >&2
+  if read -s -p "Press Enter for emergency shell or wait 60 seconds for reboot." -t 60; then
+    echo >&2; echo "Entering emergency mode. Exit the shell to retry /init (you might need to clean up mounts first) or reboot with 'reboot -f'." >&2
+    busybox sh || true
+    exec /init
+  else
+    echo >&2; echo "INFO: Rebooting" >&2
+    exec reboot -f
+  fi
+}
+trap 'emergency' ERR
+
+# Custom debug breakpoint
+debug_sh() {
+  if [ "$(cmdline_arg rd.earlyshell)" != "" ]; then
+    echo "INFO: Entering debug shell breakpoint ($*), exit to continue booting (reboot with 'reboot -f')">&2
+    busybox sh || true
+  fi
+}
+debug_sh 1/4: before mdev
+if [ "$(cmdline_arg rd.earlytrace)" != "" ]; then
+  set -x
+fi
+
+mdev -d
+mdev -s
+# Coldplugging but with using /sbin/modprobe (which is kmod) instead of busybox's modprobe
+# because busybox doesn't properly support the globs in modules.alias
+find /sys/ -name modalias -print0 | xargs -0 sort -u | tr '\n' '\0' | xargs -0 /sbin/modprobe -abq || true
+# Required to access disks, but not autoloaded:
+modprobe sd_mod
+
+debug_sh 2/4: before verity
+
+find_drive() {
+  local search="$1"
+  local ueventline=
+  local blkidmatch=
+  local drive=
+  local waitingmsg=
+  local starttime=
+  local timeoutsecs=
+  local now=
+  case "${search}" in
+    LABEL=*)
+        blkidmatch="${search#LABEL=}"
+        # Needs " around the value
+        blkidmatch="LABEL=\"${blkidmatch}\""
+        ;;
+    UUID=*)
+        blkidmatch="${search#UUID=}"
+        # Needs " around the value
+        blkidmatch="UUID=\"$(echo "${blkidmatch}" | tr "[:upper:]" "[:lower:]")\""
+        ;;
+    PARTUUID=*)
+        ueventline="${search#PARTUUID=}"
+        ueventline="PARTUUID=$(echo "${ueventline}" | tr "[:upper:]" "[:lower:]")"
+        ;;
+    PARTLABEL=*)
+        ueventline="PARTNAME=${search#PARTLABEL=}"
+        ;;
+    *)
+        echo "${search}"
+        return
+        ;;
+  esac
+  starttime=$(date +%s)
+  # Default to 5 minutes
+  timeoutsecs=$(cmdline_arg rd.earlytimeout 300)
+  while [ "${drive}" = "" ]; do
+    now=$(date +%s)
+    # Timeout of 5 minutes for finding the device
+    # NOTE: Only mdev -d runs as this point and the kernel also can spawn modprobe to load modules.
+    # If problems arise, first make sure that required modules and their deps are actually in the initrd,
+    # but if that's not enough we might even have to trigger the find /sys ... xargs coldplugging
+    # here again every now and then? (Last resort would be to run proper udev, possibly without systemd.)
+    if [ $((now - starttime)) -gt "${timeoutsecs}" ]; then
+      echo "ERROR: Timeout waiting for drive: ${ueventline}${blkidmatch}" >&2
+      return 1 # Throw error
+    fi
+    # No "sleep 0.1", so this is rather busy polling
+    if [ "${ueventline}" != "" ]; then
+      drive="$({ grep -s -l -m 1 -r "${ueventline}" /sys/class/block/*/uevent || true; } | cut -d / -f 5)"
+    else
+      drive="$(blkid | { grep -m 1 "${blkidmatch}" || true ; } | cut -d : -f 1 | cut -d / -f 3-)"
+    fi
+    if [ "${drive}" = "" ] && [ "${waitingmsg}" = "" ]; then
+      echo "Waiting for drive..." >&2
+      waitingmsg=1
+    fi
+  done
+  drive="/dev/${drive}"
+  echo "${drive}"
+}
+
+# Ported code from the generators
+verityusr=$(cmdline_arg verity.usr)
+usrhash=$(cmdline_arg verity.usrhash)
+
+verityusr=$(find_drive "${verityusr}")
+
+# Only proceed if the source is a path and we have sufficient parameters.
+if echo "${verityusr}" | grep -q "^/" && [ "${usrhash}" != "" ]; then
+  # Hardcoded expected value from the image GPT layout
+  veritysetup --panic-on-corruption --hash-offset=1065345024 open "${verityusr}" usr "${verityusr}" "${usrhash}"
+  # If there's a hash mismatch during table initialization,
+  # veritysetup reports it on stderr but still exits 0.
+  # Manually check the target status and fail if invalid.
+  status=$(dmsetup status usr | cut -d " " -f 4)
+  if [ "${status}" != V ]; then
+    echo "Verity setup failed" >&2
+    false # Throw error
+  fi
+fi
+
+usr=$(cmdline_arg mount.usr $(cmdline_arg usr))
+usrfstype=$(cmdline_arg mount.usrfstype $(cmdline_arg usrfstype auto))
+usrflags=$(cmdline_arg mount.usrflags $(cmdline_arg usrflags ro))
+
+usr=$(find_drive "${usr}")
+
+if [ "${usr}" = "" ] && [ -f /usr.squashfs ]; then
+  usr=/usr.squashfs
+  usrfstype=squashfs
+elif [ "${usrfstype}" = btrfs ] || [ "${usrfstype}" = auto ]; then
+  if [ "$(echo ",${usrflags}," | grep -v -F ',ro,')" != "" ]; then
+    true # Don't set "norecovery" when mounting rw
+  else
+    usrflags="${usrflags},rescue=nologreplay"
+  fi
+fi
+# Only proceed if the source is a path.
+case "${usr}" in
+  /*) : ;;
+  *) echo "No mountable /usr partition given (usr='${usr}')" >&2
+    false # Throw error
+    ;;
+esac
+
+debug_sh 3/4: before /sysusr mount
+
+echo "Mounting /usr from ${usr}" >&2
+# mount -t auto only works if btrfs is already loaded
+modprobe btrfs
+mkdir -p /sysusr/usr
+mount -t "${usrfstype}" -o "${usrflags}" "${usr}" /sysusr/usr
+
+# Busybox doesn't load this for us
+modprobe loop
+LOOP=$(losetup -f)
+losetup -r "${LOOP}" /sysusr/usr/lib/flatcar/bootengine.img
+mkdir /underlay /work
+mount -t tmpfs tmpfs /work
+mkdir /work/realinit /work/work
+mount -t squashfs "${LOOP}" /underlay
+mkdir -p /realinit
+mount -t overlay -o rw,lowerdir=/underlay,upperdir=/work/realinit,workdir=/work/work overlay /realinit
+mkdir -p /realinit/sysusr/usr
+mount -o move /sysusr/usr /realinit/sysusr/usr
+if [ "${usr}" = /usr.squashfs ]; then
+  mkdir -p /oem
+  mkdir -p /realinit/oem
+  mount -o bind /oem /realinit/oem
+  touch /realinit/usr.squashfs
+  mount -o bind /usr.squashfs /realinit/usr.squashfs
+fi
+debug_sh 4/4: before switch_root to /realinit
+killall mdev || true
+umount /proc
+umount /sys
+umount /dev/pts
+# Lazy unmount because /dev/console is held by the current process
+umount -l /dev
+exec switch_root /realinit /init

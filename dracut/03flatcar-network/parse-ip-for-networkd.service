@@ -2,7 +2,7 @@
 Description=Write systemd-networkd units from cmdline
 DefaultDependencies=false
 
-After=afterburn-network-kargs.service
+After=afterburn-network-kargs.service dracut-cmdline.service
 PartOf=systemd-networkd.service
 Before=systemd-networkd.service initrd-switch-root.target
 # Switching the root filesystem terminates all running services with binaries from the initramfs, we need to finish before that happens
