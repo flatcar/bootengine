@@ -50,7 +50,7 @@ mdev -s
 # because busybox doesn't properly support the globs in modules.alias
 find /sys/ -name modalias -print0 | xargs -0 sort -u | tr '\n' '\0' | xargs -0 /sbin/modprobe -abq || true
 # Required to access disks, but not autoloaded:
-modprobe sd_mod
+/sbin/modprobe sd_mod
 
 debug_sh 2/4: before verity
 
@@ -163,12 +163,12 @@ debug_sh 3/4: before /sysusr mount
 
 echo "Mounting /usr from ${usr}" >&2
 # mount -t auto only works if btrfs is already loaded
-modprobe btrfs
+/sbin/modprobe btrfs
 mkdir -p /sysusr/usr
 mount -t "${usrfstype}" -o "${usrflags}" "${usr}" /sysusr/usr
 
 # Busybox doesn't load this for us
-modprobe loop
+/sbin/modprobe loop
 LOOP=$(losetup -f)
 losetup -r "${LOOP}" /sysusr/usr/lib/flatcar/bootengine.img
 mkdir /underlay /work
