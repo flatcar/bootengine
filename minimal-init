@@ -44,11 +44,15 @@ if [ "$(cmdline_arg rd.earlytrace)" != "" ]; then
   set -x
 fi
 
+loadmodules() {
+  # Coldplugging but with using /sbin/modprobe (which is kmod) instead of busybox's modprobe
+  # because busybox doesn't properly support the globs in modules.alias
+  find /sys/ -name modalias -print0 | xargs -0 sort -u | tr '\n' '\0' | xargs -0 /sbin/modprobe -abq || true
+}
+
 mdev -d
 mdev -s
-# Coldplugging but with using /sbin/modprobe (which is kmod) instead of busybox's modprobe
-# because busybox doesn't properly support the globs in modules.alias
-find /sys/ -name modalias -print0 | xargs -0 sort -u | tr '\n' '\0' | xargs -0 /sbin/modprobe -abq || true
+loadmodules
 # Required to access disks, but not autoloaded:
 /sbin/modprobe sd_mod
 
@@ -100,7 +104,13 @@ find_drive() {
       echo "ERROR: Timeout waiting for drive: ${ueventline}${blkidmatch}" >&2
       return 1 # Throw error
     fi
-    # No "sleep 0.1", so this is rather busy polling
+    if [ $((now - starttime)) -gt 10 ]; then
+      sleep 5
+      echo "Still waiting for drive..." >&2
+      loadmodules
+    fi
+    # No "sleep 0.1", so this is rather busy polling but normally it works on first try
+    # and after some time we stop busy polling and have the longer sleep above
     if [ "${ueventline}" != "" ]; then
       drive="$({ grep -s -l -m 1 -r "${ueventline}" /sys/class/block/*/uevent || true; } | cut -d / -f 5)"
     else
