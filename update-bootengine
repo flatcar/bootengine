@@ -16,6 +16,7 @@ This tool uses dracut to update /usr/share/bootengine/bootengine.cpio
 "
 
 DRACUT_ARGS=(
+    --verbose
     --force
     --no-hostonly
     --no-compress
