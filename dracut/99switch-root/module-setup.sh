@@ -13,4 +13,9 @@ install() {
         "${systemdsystemunitdir}/initrd-parse-etc.service.d/override.conf"
     inst_simple "${moddir}/nocgroup.conf" \
         "/etc/systemd/system.conf.d/nocgroup.conf"
+
+    # Ensure sysctl is run again after switching root to pick up any sysctl
+    # files that are deliberately missing from the initrd.
+    inst_simple "${moddir}/rerun.conf" \
+        "${systemdsystemunitdir}/systemd-sysctl.service.d/rerun.conf"
 }
