@@ -32,8 +32,8 @@ COREOS_BLANK_MACHINE_ID="42000000000000000000000000000042"
 MACHINE_ID_FILE="/sysroot/etc/machine-id"
 
 # Allow to rerun the script
-if usrbin mountpoint -q /sysroot/etc; then
-  umount /sysroot/etc
+if SYSTEMD_IN_INITRD=0 systemd-confext --root=/sysroot status | grep flatcar-default; then
+  SYSTEMD_IN_INITRD=0 systemd-confext --root=/sysroot unmerge
 fi
 
 function selectiveosreset() {
@@ -159,9 +159,21 @@ if [ ! -e "/sysroot/etc/.no-dup-update" ]; then
   walksysroot /etc overlaycleanup
 fi
 
-# Set up overlay mount for /etc (as long as we can't use syscfg for that)
-mkdir -p /sysroot/.etc-work
-mount -t overlay overlay -o lowerdir=/sysroot/usr/share/flatcar/etc,upperdir=/sysroot/etc,workdir=/sysroot/.etc-work,redirect_dir=on,metacopy=off,noatime /sysroot/etc
+# Set up overlay mount for /etc (done here until we have an upstream systemd unit doing it)
+# This is done early here so that Ignition and the Flatcar extension fetching and A/B setup can use /etc
+mkdir -p /sysroot/var/lib/extensions.mutable/
+if [ ! -L /sysroot/var/lib/extensions.mutable/etc ] && [ ! -e /sysroot/var/lib/extensions.mutable/etc ]; then
+  ln -s /etc /sysroot/var/lib/extensions.mutable/etc
+fi
+# Workaround until 259: Set SYSTEMD_IN_INITRD because even with --root=
+# this would otherwise look for initrd extension metadata.
+SYSTEMD_IN_INITRD=0 systemd-confext --root=/sysroot merge
+SYSTEMD_IN_INITRD=0 systemd-confext --root=/sysroot status | grep flatcar-default || { echo "error: flatcar-default confext not loaded" ; exit 1 ; }
+# Even when the planned sysext/confext .services units are there
+# the above call should stay because we first need confext for Ignition
+# to have default files but then we need to reload for any user confexts
+# to be applied and we can later rely on the confext/sysext .services
+# for that while the above call is specific to Flatcar/Ignition.
 
 # PXE initrds may provide OEM. Despite OEM partition being moved to
 # /oem in general, we keep checking /usr/share/oem in initrds to avoid

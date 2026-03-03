@@ -21,4 +21,6 @@ install() {
         "${systemdsystemunitdir}/initrd-setup-root-after-ignition.service"
     inst_script "$moddir/gpg-agent-wrapper" \
         "/usr/bin/gpg-agent"
+
+    inst_multiple systemd-sysext systemd-confext
 }
