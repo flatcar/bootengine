@@ -19,10 +19,7 @@ normal)
     ;;
 pxe)
     # OEM directory in the initramfs itself.
-    # Despite having the OEM partition being moved to
-    # /oem in general, we keep checking /usr/share/oem in initrds to avoid
-    # breaking compatibility.
-    src=/usr/share/oem
+    src=/oem
     # Workaround, "chmod" is not available
     cp -a /bin/cat /bin/is-live-image
     printf '#!/bin/sh\nexit 0\n' > /bin/is-live-image
