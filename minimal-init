@@ -192,8 +192,7 @@ mount -o move /sysusr/usr /realinit/sysusr/usr
 if [ "${usr}" = /usr.squashfs ]; then
   # Move either /oem (preferred) or /usr/share/oem (legacy) into the new root.
   mv /oem /realinit || mv /usr/share/oem /realinit || true
-  touch /realinit/usr.squashfs
-  mount -o bind /usr.squashfs /realinit/usr.squashfs
+  mv /usr.squashfs /realinit
 fi
 debug_sh 4/4: before switch_root to /realinit
 killall mdev || true
