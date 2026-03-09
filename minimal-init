@@ -190,11 +190,9 @@ mount -t overlay -o rw,lowerdir=/underlay,upperdir=/work/realinit,workdir=/work/
 mkdir -p /realinit/sysusr/usr
 mount -o move /sysusr/usr /realinit/sysusr/usr
 if [ "${usr}" = /usr.squashfs ]; then
-  mkdir -p /oem
-  mkdir -p /realinit/oem
-  mount -o bind /oem /realinit/oem
-  touch /realinit/usr.squashfs
-  mount -o bind /usr.squashfs /realinit/usr.squashfs
+  # Move either /oem (preferred) or /usr/share/oem (legacy) into the new root.
+  mv /oem /realinit || mv /usr/share/oem /realinit || true
+  mv /usr.squashfs /realinit
 fi
 debug_sh 4/4: before switch_root to /realinit
 killall mdev || true
