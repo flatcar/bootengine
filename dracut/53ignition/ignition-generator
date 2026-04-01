@@ -85,19 +85,19 @@ fi
 # Write ignition-setup.service customized for PXE/ISO or regular boot
 pxe=
 nopxe=
-usr=$(cmdline_arg mount.usr "$(cmdline_arg usr)")
-if [[ -z "${usr}" && -f /usr.squashfs ]]; then
-    # PXE-booted system, with or without persistent root
-    # (see 10diskless-generator)
-    pxe=1
-else
+if is-live-image; then
     nopxe=1
     if $(cmdline_bool flatcar.first_boot 0) || $(cmdline_bool coreos.first_boot 0); then
         add_requires ignition-diskful.target ignition-complete.target
     else
         add_requires ignition-diskful-subsequent.target ignition-subsequent.target
     fi
+else
+    # PXE-booted system, with or without persistent root
+    # (see 10diskless-generator)
+    pxe=1
 fi
+
 cat > ${UNIT_DIR}/ignition-setup-pre.service <<EOF
 [Unit]
 Description=Ignition env setup

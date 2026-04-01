@@ -13,16 +13,10 @@ normal)
     src=/mnt/oem
     mkdir -p "${src}"
     mount /dev/disk/by-label/OEM "${src}"
-    # Workaround, "chmod" is not available
-    cp -a /bin/cat /bin/is-live-image
-    printf '#!/bin/sh\nexit 1\n' > /bin/is-live-image
     ;;
 pxe)
     # OEM directory in the initramfs itself.
     src=/oem
-    # Workaround, "chmod" is not available
-    cp -a /bin/cat /bin/is-live-image
-    printf '#!/bin/sh\nexit 0\n' > /bin/is-live-image
     ;;
 *)
     echo "Usage: $0 {normal|pxe}" >&2

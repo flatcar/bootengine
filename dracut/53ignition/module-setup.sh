@@ -92,6 +92,10 @@ install() {
     inst_script "$moddir/retry-umount.sh" \
         "/usr/sbin/retry-umount"
 
+    # Ignition calls is-live-image.
+    inst_script "$moddir/is-live-image.sh" \
+        /bin/is-live-image
+
     inst_simple "$moddir/ignition-generator" \
         "$systemdutildir/system-generators/ignition-generator"
 
