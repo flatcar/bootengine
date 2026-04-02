@@ -17,8 +17,9 @@ After=sockets.target paths.target slices.target
 # Flatcar:
 Requires=local-fs-pre.target
 Before=local-fs-pre.target
-Requires=ignition-setup.service
-After=ignition-setup.service
+Requires=ignition-setup-pre.service
+After=ignition-setup-pre.service
+RequiresMountsFor=/sysusr/usr/
 
 # Stage order: fetch-offline [-> fetch] [-> kargs] -> disks -> mount -> files.
 Before=ignition-fetch.service

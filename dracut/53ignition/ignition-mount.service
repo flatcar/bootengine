@@ -34,8 +34,9 @@ After=ignition-remount-sysroot.service
 # Flatcar:
 Requires=initrd-setup-root.service
 After=initrd-setup-root.service
-Requires=ignition-setup.service
-After=ignition-setup.service
+Requires=ignition-setup-pre.service
+After=ignition-setup-pre.service
+RequiresMountsFor=/sysusr/usr/
 
 [Service]
 Type=oneshot
