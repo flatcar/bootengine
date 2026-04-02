@@ -12,4 +12,6 @@ install() {
     inst_simple "$moddir/diskless-btrfs" "$systemdutildir/diskless-btrfs"
     inst_simple "$moddir/diskless-generator" \
         "$systemdutildir/system-generators/diskless-generator"
+    inst_simple "$moddir/sysroot-oem.mount" \
+        "$systemdsystemunitdir/sysroot-oem.mount"
 }

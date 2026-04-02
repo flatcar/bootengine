@@ -1,0 +1,8 @@
+[Unit]
+After=ignition-mount.service
+
+[Mount]
+What=/oem
+Where=/sysroot/oem
+Type=none
+Options=bind

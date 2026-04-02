@@ -4,19 +4,14 @@
 
 set -euxo pipefail
 
-# Handle PXE boots gracefully by not mounting any disk and instead error out early
-if [ "${OEM_ID}" = "pxe" ]; then
+# Bail out early when PXE booting. OEM is a tmpfs in this case, so a new
+# grub.cfg would be lost on reboot.
+if [[ ${OEM_ID} == pxe ]]; then
   echo "error: can't set kargs for PXE boots" >&2
   exit 1
 fi
 
-# Mount the OEM partition. Note that we mount but we don't unmount it because we
-# are run in a systemd unit with MountFlags=slave so it is unmounted for us.
-oemmnt=/mnt/oem_partition
-mkdir -p ${oemmnt}
-oemdev=/dev/disk/by-label/OEM
-mount -o rw ${oemdev} ${oemmnt}
-grubcfg="${oemmnt}/grub.cfg"
+grubcfg="/oem/grub.cfg"
 
 # Ensure that it exists before we read from it (needed for the generic Flatcar image), "touch" does not exist in initramfs
 true >> $grubcfg

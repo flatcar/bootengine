@@ -1,7 +1,7 @@
 [Unit]
 Description=Root filesystem completion
 DefaultDependencies=no
-RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
+RequiresMountsFor=/sysroot/usr/
 After=initrd-root-fs.target ignition-files.service initrd-setup-root.service
 Before=initrd-parse-etc.service
 OnFailure=emergency.target
@@ -10,6 +10,10 @@ OnFailureJobMode=replace-irreversibly
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+# Flatcar: Start the /sysroot/oem bind mount and its underlying /oem mount.
+# Don't use RequiresMountsFor for this because /oem may get unmounted earlier in
+# the same systemd transaction, preventing this unit from starting.
+ExecStartPre=-systemctl start sysroot-oem.mount
 ExecStart=/sbin/initrd-setup-root-after-ignition
 
 [Install]

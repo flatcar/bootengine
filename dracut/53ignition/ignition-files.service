@@ -20,12 +20,14 @@ Requires=initrd-setup-root.service
 After=initrd-setup-root.service
 # Already mount the OEM partition here so that it works to write files
 # without having to declare it as initrd mount in Ignition
-RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
+RequiresMountsFor=/sysroot/usr/
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
-# Flatcar: Make sure that the OEM mount point is there even if it shortly was away
+# Flatcar: Start the /sysroot/oem bind mount and its underlying /oem mount.
+# Don't use RequiresMountsFor for this because /oem may get unmounted earlier in
+# the same systemd transaction, preventing this unit from starting.
 ExecStartPre=-systemctl start sysroot-oem.mount
 ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=files --log-to-stdout
