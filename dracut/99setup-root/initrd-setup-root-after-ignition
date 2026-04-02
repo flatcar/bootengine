@@ -168,11 +168,11 @@ for NAME in $(grep -h -o '^[^#]*' /sysroot/etc/flatcar/enabled-sysext.conf /sysr
 done
 
 # Here we load a second time so that any user-supplied configuration extensions are present at boot
-SYSTEMD_IN_INITRD=0 systemd-confext --root=/sysroot refresh
+systemd-confext --root=/sysroot refresh
 # Then for the first time we can also apply system extensions so that the final system has them at boot
 # (done here until we have an upstream systemd unit doing it).
 if [ $(readlink -f /sysroot/etc/systemd/system/systemd-sysext.service 2>/dev/null) != "/dev/null" ]; then
-  if ! SYSTEMD_IN_INITRD=0 systemd-sysext --root=/sysroot merge ; then
+  if ! systemd-sysext --root=/sysroot merge ; then
     echo "ERROR: systemd-sysext failed to set up extensions in initrd, continuing boot" >&2
   fi
 fi
