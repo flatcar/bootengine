@@ -28,7 +28,7 @@ Before=initrd-root-device.target
 Before=sysroot.mount
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # This stage requires udevd to detect disk partitioning changes.
 Requires=systemd-udevd.service

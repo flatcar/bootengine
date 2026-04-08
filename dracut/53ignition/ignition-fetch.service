@@ -17,7 +17,7 @@ After=ignition-fetch-offline.service
 Before=ignition-disks.service
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # If we run, we definitely need network, so make sure we run after.
 After=network.target

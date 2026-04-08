@@ -15,7 +15,7 @@ Requires=ignition-setup.service
 After=ignition-setup.service
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 [Service]
 Type=oneshot

@@ -9,7 +9,7 @@ DefaultDependencies=no
 Before=ignition-diskful.target
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 After=sysroot.mount
 ConditionPathIsReadWrite=!/sysroot

@@ -18,7 +18,7 @@ After=initrd-setup-root.service
 RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # Stage order: fetch-offline [-> fetch] [-> kargs] -> disks -> mount -> files.
 After=ignition-mount.service
