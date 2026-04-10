@@ -5,18 +5,6 @@ ConditionPathExists=/etc/initrd-release
 DefaultDependencies=false
 Before=ignition-complete.target
 
-# Flatcar:
-Requires=initrd-root-fs.target
-After=initrd-root-fs.target
-Requires=ignition-disks.service
-After=ignition-disks.service
-# setup the root filesystem before we try do things like create users on it.
-Requires=initrd-setup-root.service
-After=initrd-setup-root.service
-# Already mount the OEM partition here so that it works to write files
-# without having to declare it as initrd mount in Ignition
-RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
-
 OnFailure=emergency.target
 OnFailureJobMode=replace-irreversibly
 
@@ -25,6 +13,14 @@ After=ignition-mount.service
 
 # Run before initrd-parse-etc so that we can drop files it then picks up.
 Before=initrd-parse-etc.service
+
+# Flatcar:
+# setup the root filesystem before we try do things like create users on it.
+Requires=initrd-setup-root.service
+After=initrd-setup-root.service
+# Already mount the OEM partition here so that it works to write files
+# without having to declare it as initrd mount in Ignition
+RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
 
 [Service]
 Type=oneshot

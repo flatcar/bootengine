@@ -4,8 +4,7 @@ Documentation=https://github.com/coreos/ignition
 ConditionPathExists=/etc/initrd-release
 DefaultDependencies=false
 Before=ignition-complete.target
-# Flatcar:
-#After=basic.target
+#After=basic.target # Flatcar
 ConditionPathExists=/run/ignition/neednet
 # Don't run if the `fetch-offline` stage successfully fetched a config
 ConditionPathExists=!/run/ignition.json
@@ -21,11 +20,10 @@ OnFailureJobMode=replace-irreversibly
 
 # If we run, we definitely need network, so make sure we run after.
 After=network.target
+
 # Flatcar:
-Wants=systemd-networkd.service
-After=systemd-networkd.service
-Wants=systemd-resolved.service
-After=systemd-resolved.service
+Wants=systemd-networkd.service systemd-resolved.service
+After=systemd-networkd.service systemd-resolved.service
 Requires=local-fs-pre.target
 Before=local-fs-pre.target
 Requires=ignition-setup-pre.service
