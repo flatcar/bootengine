@@ -11,7 +11,7 @@ PartOf=systemd-networkd.service
 ConditionKernelCommandLine=|coreos.oem.id=vmware
 ConditionKernelCommandLine=|flatcar.oem.id=vmware
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # Flatcar: Load coreos-metadata binary
 Requires=sysusr-usr.mount

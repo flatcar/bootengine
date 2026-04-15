@@ -5,20 +5,8 @@ ConditionPathExists=/etc/initrd-release
 DefaultDependencies=false
 Before=ignition-complete.target
 
-# Flatcar:
-Requires=initrd-root-fs.target
-After=initrd-root-fs.target
-Requires=ignition-setup.service ignition-disks.service
-After=ignition-setup.service ignition-disks.service
-# setup the root filesystem before we try do things like create users on it.
-Requires=initrd-setup-root.service
-After=initrd-setup-root.service
-# Already mount the OEM partition here so that it works to write files
-# without having to declare it as initrd mount in Ignition
-RequiresMountsFor=/sysroot/usr/ /sysroot/oem/
-
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # Stage order: fetch-offline [-> fetch] [-> kargs] -> disks -> mount -> files.
 After=ignition-mount.service
@@ -26,10 +14,20 @@ After=ignition-mount.service
 # Run before initrd-parse-etc so that we can drop files it then picks up.
 Before=initrd-parse-etc.service
 
+# Flatcar:
+# setup the root filesystem before we try do things like create users on it.
+Requires=initrd-setup-root.service
+After=initrd-setup-root.service
+# Already mount the OEM partition here so that it works to write files
+# without having to declare it as initrd mount in Ignition
+RequiresMountsFor=/sysroot/usr/
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
-# Flatcar: Make sure that the OEM mount point is there even if it shortly was away
+# Flatcar: Start the /sysroot/oem bind mount and its underlying /oem mount.
+# Don't use RequiresMountsFor for this because /oem may get unmounted earlier in
+# the same systemd transaction, preventing this unit from starting.
 ExecStartPre=-systemctl start sysroot-oem.mount
 ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=files --log-to-stdout

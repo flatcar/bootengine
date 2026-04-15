@@ -174,8 +174,3 @@ SYSTEMD_IN_INITRD=0 systemd-confext --root=/sysroot status | grep flatcar-defaul
 # to have default files but then we need to reload for any user confexts
 # to be applied and we can later rely on the confext/sysext .services
 # for that while the above call is specific to Flatcar/Ignition.
-
-# PXE initrds may provide OEM.
-if [ -d /oem ] && mountpoint --quiet /sysroot/oem; then
-    cp -Ra /oem/. /sysroot/oem
-fi

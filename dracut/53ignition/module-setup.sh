@@ -72,10 +72,6 @@ install() {
     inst_script "$moddir/ignition-kargs-helper" \
         "/usr/sbin/ignition-kargs-helper"
 
-    # Flatcar: add ignition-setup
-    inst_script "$moddir/ignition-setup.sh" \
-        "/usr/sbin/ignition-setup"
-
     # Flatcar: add ignition-setup-pre
     inst_script "$moddir/ignition-setup-pre.sh" \
         "/usr/sbin/ignition-setup-pre"
@@ -91,6 +87,10 @@ install() {
     # Flatcar: add retry-umount
     inst_script "$moddir/retry-umount.sh" \
         "/usr/sbin/retry-umount"
+
+    # Ignition calls is-live-image.
+    inst_script "$moddir/is-live-image.sh" \
+        /bin/is-live-image
 
     inst_simple "$moddir/ignition-generator" \
         "$systemdutildir/system-generators/ignition-generator"
@@ -169,6 +169,12 @@ EOF
     # Ensure /sysusr/usr is mounted before decrypting root.
     inst_simple "$moddir/sysusr-usr-revdeps.conf" \
         "$systemdsystemunitdir/systemd-cryptsetup@rootencrypted.service.d/sysusr-usr.conf"
+
+    # Ignition reads user.ign and base.d/* in /usr/lib/ignition by default, but
+    # our initrd is not writeable. Create symlinks pointing to /oem in advance.
+    mkdir -m0755 -p "${initdir}"/usr/lib/ignition
+    ln -snf /oem/config.ign "${initdir}"/usr/lib/ignition/user.ign
+    ln -snf /oem/base/ "${initdir}"/usr/lib/ignition/base.d
 }
 
 # See: https://github.com/coreos/ignition/commit/d304850c3d3696822bc05e0833ee4b27df9d7a38

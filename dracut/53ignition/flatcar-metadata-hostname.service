@@ -40,7 +40,7 @@ ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
 ConditionKernelCommandLine=|flatcar.oem.id=scaleway
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 [Service]
 Type=oneshot

@@ -22,7 +22,7 @@ Before=initrd-switch-root.target
 After=network.target
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # Make sure the final /sysroot is ready first, since we're mounting under there
 Requires=initrd-root-fs.target
@@ -34,14 +34,15 @@ After=ignition-remount-sysroot.service
 # Flatcar:
 Requires=initrd-setup-root.service
 After=initrd-setup-root.service
-Requires=ignition-setup.service
-After=ignition-setup.service
+Requires=ignition-setup-pre.service
+After=ignition-setup-pre.service
+RequiresMountsFor=/sysusr/usr/
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
-# Flatcar: Unmount any OEM mount in case the Ignition config has one defined
-ExecStartPre=/bin/bash -c 'if ! mount | grep -m 1 /sysroot/oem | grep tmpfs; then umount /sysroot/oem || true; fi'
+# Flatcar: Unmount any disk-based OEM partition in case the Ignition config wants to mount it.
+ExecStartPre=sh -c 'findmnt -t tmpfs /oem >/dev/null || systemctl stop oem.mount'
 ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=mount --log-to-stdout
 ExecStop=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=umount --log-to-stdout

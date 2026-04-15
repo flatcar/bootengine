@@ -82,22 +82,16 @@ else
     add_requires ignition-subsequent.target initrd.target
 fi
 
-# Write ignition-setup.service customized for PXE/ISO or regular boot
-pxe=
-nopxe=
-usr=$(cmdline_arg mount.usr "$(cmdline_arg usr)")
-if [[ -z "${usr}" && -f /usr.squashfs ]]; then
-    # PXE-booted system, with or without persistent root
-    # (see 10diskless-generator)
-    pxe=1
-else
-    nopxe=1
+# Do disk-based steps for non-PXE/ISO boot.
+if is-live-image; then
+    add_requires disk-uuid.service initrd.target
     if $(cmdline_bool flatcar.first_boot 0) || $(cmdline_bool coreos.first_boot 0); then
         add_requires ignition-diskful.target ignition-complete.target
     else
         add_requires ignition-diskful-subsequent.target ignition-subsequent.target
     fi
 fi
+
 cat > ${UNIT_DIR}/ignition-setup-pre.service <<EOF
 [Unit]
 Description=Ignition env setup
@@ -107,45 +101,13 @@ Requires=local-fs-pre.target
 Before=local-fs-pre.target
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/sbin/ignition-setup-pre
 EOF
-
-cat > ${UNIT_DIR}/ignition-setup.service <<EOF
-[Unit]
-Description=Ignition (setup)
-DefaultDependencies=false
-
-# Flatcar: Load Ignition binary
-Requires=sysusr-usr.mount ignition-setup-pre.service
-After=sysusr-usr.mount ignition-setup-pre.service
-
-Requires=local-fs-pre.target
-Before=local-fs-pre.target
-
-# pull in OEM device if it should exist
-${nopxe:+Requires=dev-disk-by\x2dlabel-OEM.device
-After=dev-disk-by\x2dlabel-OEM.device}
-
-OnFailure=emergency.target
-OnFailureJobMode=isolate
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-MountFlags=slave
-ExecStart=/usr/sbin/ignition-setup ${nopxe:+normal} ${pxe:+pxe}
-EOF
-
-# Call the disk UUID randomizer whenever we're not PXE booting
-# The unit will check if it needs to act or not.
-if [ "${nopxe}" = 1 ]; then
-    add_requires "disk-uuid.service" initrd.target
-fi
 
 if [[ $(cmdline_arg flatcar.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg coreos.oem.id) == "digitalocean" ]] || [[ $(cmdline_arg flatcar.oem.id) == "proxmoxve" ]]; then
     add_requires flatcar-afterburn-network.service initrd.target

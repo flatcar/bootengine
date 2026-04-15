@@ -5,12 +5,6 @@ ConditionPathExists=/etc/initrd-release
 DefaultDependencies=false
 Before=ignition-complete.target
 
-# Flatcar:
-Requires=local-fs-pre.target
-Before=local-fs-pre.target
-Requires=ignition-setup.service
-After=ignition-setup.service
-
 # Stage order: fetch-offline [-> fetch] [-> kargs] -> disks -> mount -> files.
 After=ignition-fetch.service
 Before=ignition-mount.service
@@ -28,14 +22,23 @@ Before=initrd-root-device.target
 Before=sysroot.mount
 
 OnFailure=emergency.target
-OnFailureJobMode=isolate
+OnFailureJobMode=replace-irreversibly
 
 # This stage requires udevd to detect disk partitioning changes.
 Requires=systemd-udevd.service
 After=systemd-udevd.service
 
+# Flatcar:
+Requires=local-fs-pre.target
+Before=local-fs-pre.target
+Requires=ignition-setup-pre.service
+After=ignition-setup-pre.service
+RequiresMountsFor=/sysusr/usr/
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/run/ignition.env
+# Flatcar: Unmount any disk-based OEM partition in case the Ignition config wants to wipe it.
+ExecStartPre=sh -c 'findmnt -t tmpfs /oem >/dev/null || systemctl stop oem.mount'
 ExecStart=/usr/bin/ignition --root=/sysroot --platform=${PLATFORM_ID} --stage=disks
