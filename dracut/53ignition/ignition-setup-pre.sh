@@ -18,6 +18,8 @@ oem_id=metal
 
 case $(systemd-detect-virt) in
     kvm|qemu) oem_id=qemu ;;
+    oracle) oem_id=virtualbox ;;
+    vmware) oem_id=vmware ;;
 esac
 
 oem_cmdline=$(cmdline_arg flatcar.oem.id ${oem_id})
@@ -30,8 +32,8 @@ case ${oem_cmdline} in
     ec2) oem_cmdline=aws ;;
     # Ignition changed the platform name to "gcp"
     gce) oem_cmdline=gcp ;;
-    # To maintain compatibility with eventual legacy 'flatcar.oem.id=pxe'
-    pxe) oem_cmdline=metal ;;
+    # Fall back to detection for cases unsupported by Ignition
+    cloudsigma|pxe|vagrant) oem_cmdline=${oem_id} ;;
 esac
 
 cat > /run/ignition.env <<EOF
