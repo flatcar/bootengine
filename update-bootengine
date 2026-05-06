@@ -20,7 +20,7 @@ DRACUT_ARGS=(
     --force
     --no-hostonly
     --no-compress
-    --omit "fido2 lvm multipath network pkcs11 tpm2-tss zfs"
+    --omit "bluetooth fido2 lvm multipath network pkcs11 tpm2-tss zfs"
     --add "i18n iscsi"
     --add-drivers "loop brd drbd nbd rbd mmc_block xen-blkfront zram libarc4 lru_cache zsmalloc vboxguest"
     --kernel-cmdline "SYSTEMD_SULOGIN_FORCE=1"
