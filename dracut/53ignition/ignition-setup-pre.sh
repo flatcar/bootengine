@@ -3,7 +3,7 @@
 
 set -e
 
-cmdline=( $(</proc/cmdline) )
+read -r -a cmdline < /proc/cmdline
 cmdline_arg() {
     local name="$1" value="$2"
     for arg in "${cmdline[@]}"; do
@@ -15,28 +15,28 @@ cmdline_arg() {
 }
 
 oem_id=metal
-if [[ $(systemd-detect-virt || true) =~ ^(kvm|qemu)$ ]]; then
-    oem_id=qemu
+
+case $(systemd-detect-virt) in
+    kvm|qemu) oem_id=qemu ;;
+    oracle) oem_id=virtualbox ;;
+    vmware) oem_id=vmware ;;
+esac
+
+oem_cmdline=$(cmdline_arg flatcar.oem.id ${oem_id})
+if [[ ${oem_id} == "${oem_cmdline}" ]]; then
+    oem_cmdline=$(cmdline_arg coreos.oem.id ${oem_id})
 fi
 
-oem_cmdline="$(cmdline_arg flatcar.oem.id ${oem_id})"
-if [[ "${oem_id}" = "${oem_cmdline}" ]]; then
-    oem_cmdline="$(cmdline_arg coreos.oem.id ${oem_id})"
-fi
+case ${oem_cmdline} in
+    # Ignition changed the platform name to "aws"
+    ec2) oem_cmdline=aws ;;
+    # Ignition changed the platform name to "gcp"
+    gce) oem_cmdline=gcp ;;
+    # Fall back to detection for cases unsupported by Ignition
+    cloudsigma|pxe|vagrant) oem_cmdline=${oem_id} ;;
+esac
 
-# Ignition changed the platform name to "aws"
-if [ "${oem_cmdline}" = "ec2" ]; then
-  oem_cmdline="aws"
-fi
-
-# Ignition changed the platform name to "gcp"
-if [ "${oem_cmdline}" = "gce" ]; then
-  oem_cmdline="gcp"
-fi
-
-# To maintain compatibility with eventual legacy 'flatcar.oem.id=pxe'
-if [ "${oem_cmdline}" = "pxe" ]; then
-  oem_cmdline="metal"
-fi
-
-{ echo "OEM_ID=${oem_cmdline}" ; echo "PLATFORM_ID=${oem_cmdline}" ; } > /run/ignition.env
+cat > /run/ignition.env <<EOF
+OEM_ID=${oem_cmdline}
+PLATFORM_ID=${oem_cmdline}
+EOF

@@ -30,9 +30,6 @@ ConditionKernelCommandLine=|coreos.oem.id=ibmcloud
 ConditionKernelCommandLine=|flatcar.oem.id=ibmcloud
 ConditionKernelCommandLine=|coreos.oem.id=vultr
 ConditionKernelCommandLine=|flatcar.oem.id=vultr
-# Addition:
-ConditionKernelCommandLine=|coreos.oem.id=packet
-ConditionKernelCommandLine=|flatcar.oem.id=packet
 
 ConditionKernelCommandLine=|flatcar.oem.id=hetzner
 ConditionKernelCommandLine=|flatcar.oem.id=kubevirt
