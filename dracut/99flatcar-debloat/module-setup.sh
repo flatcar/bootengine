@@ -18,9 +18,4 @@ install() {
 
     # We maybe should include this, but more work is needed for compliance.
     rm "${initdir}"/usr/lib*/ossl-modules/fips.so
-
-    # drop it when updating to dracut 110
-    inst_libdir_file "libaudit.so*"
-    inst_libdir_file "libpam.so*"
-    inst_libdir_file "libseccomp.so*"
 }
