@@ -21,7 +21,7 @@ DRACUT_ARGS=(
     --no-hostonly
     --no-compress
     --omit "bluetooth cifs fido2 lvm multipath network nfs nvmf pkcs11 tpm2-tss zfs"
-    --add "i18n iscsi"
+    --add "i18n iscsi systemd-coredump"
     --add-drivers "loop brd drbd nbd rbd mmc_block xen-blkfront zram libarc4 lru_cache zsmalloc vboxguest"
     --kernel-cmdline "SYSTEMD_SULOGIN_FORCE=1"
     )
