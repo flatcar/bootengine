@@ -12,7 +12,7 @@ Conflicts=initrd-switch-root.target
 Type=oneshot
 RemainAfterExit=true
 Environment="APPLY=1"
-ExecStart=/lib/dracut/hooks/cmdline/99-parse-ip-for-networkd.sh
+ExecStart=/var/lib/dracut/hooks/cmdline/99-parse-ip-for-networkd.sh
 
 [Install]
 WantedBy=systemd-networkd.service
