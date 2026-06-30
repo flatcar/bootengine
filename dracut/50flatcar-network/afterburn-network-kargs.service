@@ -13,10 +13,6 @@ ConditionKernelCommandLine=|flatcar.oem.id=vmware
 OnFailure=emergency.target
 OnFailureJobMode=replace-irreversibly
 
-# Flatcar: Load coreos-metadata binary
-Requires=sysusr-usr.mount
-After=sysusr-usr.mount
-
 [Service]
 ExecStart=/usr/bin/coreos-metadata exp rd-network-kargs --cmdline --default-value ''
 Type=oneshot

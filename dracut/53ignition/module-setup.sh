@@ -162,10 +162,6 @@ EOF
         rm "${wrapper}"
     done
 
-    # Ensure /sysusr/usr is mounted before decrypting root.
-    inst_simple "$moddir/sysusr-usr-revdeps.conf" \
-        "$systemdsystemunitdir/systemd-cryptsetup@rootencrypted.service.d/sysusr-usr.conf"
-
     # Ignition reads user.ign and base.d/* in /usr/lib/ignition by default, but
     # our initrd is not writeable. Create symlinks pointing to /oem in advance.
     mkdir -m0755 -p "${initdir}"/usr/lib/ignition
