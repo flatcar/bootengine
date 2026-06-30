@@ -9,11 +9,10 @@ After=ignition-disks.service
 Requires=ignition-files.service
 After=ignition-files.service
 
-Requires=sysroot-boot.service
-After=sysroot-boot.service
+RequiresMountsFor=/boot
 
 [Service]
 Type=oneshot
 # We will only run if GRUB detected this file. Fail if we are unable to
 # remove it, rather than risking rerunning Ignition at next boot.
-ExecStart=/bin/sh -c 'if [ ! -e /sysroot/boot/flatcar/first_boot ] && [ ! -e /sysroot/boot/coreos/first_boot ]; then echo "error: /sysroot/boot/(flatcar|coreos)/first_boot not found"; exit 1; else rm -f /sysroot/boot/flatcar/first_boot /sysroot/boot/coreos/first_boot; fi'
+ExecStart=/bin/sh -c 'if [ ! -e /boot/flatcar/first_boot ] && [ ! -e /boot/coreos/first_boot ]; then echo "error: /boot/(flatcar|coreos)/first_boot not found"; exit 1; else rm -f /boot/flatcar/first_boot /boot/coreos/first_boot; fi'

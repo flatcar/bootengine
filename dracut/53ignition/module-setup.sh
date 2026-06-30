@@ -84,10 +84,6 @@ install() {
     inst_simple "$moddir/ignition-luks.conf" \
         "/etc/security/pwquality.conf.d/ignition-luks.conf"
 
-    # Flatcar: add retry-umount
-    inst_script "$moddir/retry-umount.sh" \
-        "/usr/sbin/retry-umount"
-
     # Ignition calls is-live-image.
     inst_script "$moddir/is-live-image.sh" \
         /bin/is-live-image
@@ -101,13 +97,13 @@ install() {
             "$systemdsystemunitdir/ignition-$x.target"
     done
 
-    # Flatcar: add ignition-quench.service, sysroot-boot.service,
+    # Flatcar: add ignition-quench.service, boot.mount,
     # flatcar-afterburn-network.service, flatcar-static-network.service,
     # flatcar-metadata-hostname.service, flatcar-openstack-hostname.service
     inst_simple "$moddir/ignition-quench.service" \
         "$systemdsystemunitdir/ignition-quench.service"
-    inst_simple "$moddir/sysroot-boot.service" \
-        "$systemdsystemunitdir/sysroot-boot.service"
+    inst_simple "$moddir/boot.mount" \
+        "$systemdsystemunitdir/boot.mount"
     inst_simple "$moddir/flatcar-afterburn-network.service" \
         "$systemdsystemunitdir/flatcar-afterburn-network.service"
     inst_simple "$moddir/flatcar-static-network.service" \

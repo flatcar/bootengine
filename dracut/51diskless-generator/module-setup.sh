@@ -4,7 +4,6 @@
 
 depends() {
     echo systemd
-    echo usr-generator
 }
 
 install() {

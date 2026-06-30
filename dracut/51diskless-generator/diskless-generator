@@ -43,8 +43,8 @@ if [[ -z "${usr}" && -f /usr.squashfs ]]; then
 
 [Unit]
 Before=initrd-root-fs.target
-Wants=remount-sysroot.service
-After=remount-sysroot.service
+Wants=ignition-remount-sysroot.service
+After=ignition-remount-sysroot.service
 # Make sure the loop device nodes are available
 Wants=systemd-tmpfiles-setup-dev-early.service
 After=systemd-tmpfiles-setup-dev-early.service
