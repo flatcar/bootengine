@@ -16,7 +16,7 @@ install() {
         /etc/systemd/resolved.conf
 
     inst_multiple \
-        "$systemdnetwork"/{20-calico-tunl0,50-veth,98-{gce-coreos-virtio,gce-virtio,virtio}}.link \
+        "$systemdnetwork"/98-{gce-coreos-virtio,gce-virtio,virtio}.link \
         "$systemdnetwork"/yy-{azure-sriov{,-coreos},pxe}.network \
         "$systemdnetwork"/zz-default.network
 
