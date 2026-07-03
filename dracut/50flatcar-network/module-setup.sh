@@ -42,6 +42,9 @@ install() {
     inst_simple "$moddir/yy-digitalocean.network" \
         "$systemdnetwork/yy-digitalocean.network"
 
+    inst_simple "$moddir/yy-digitalocean-coreos.network" \
+        "$systemdnetwork/yy-digitalocean-coreos.network"
+
     inst_simple "$moddir/yy-netroot.network" \
         "$systemdnetwork/yy-netroot.network"
 
