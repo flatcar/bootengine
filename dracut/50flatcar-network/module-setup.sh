@@ -16,7 +16,16 @@ install() {
         /etc/systemd/resolved.conf
 
     inst_multiple \
-        "$systemdnetwork"/{20-calico-tunl0,50-veth,98-{gce-coreos-virtio,gce-virtio,virtio}}.link
+        "$systemdnetwork"/{20-calico-tunl0,50-veth,98-{gce-coreos-virtio,gce-virtio,virtio}}.link \
+        "$systemdnetwork"/yy-{azure-sriov{,-coreos},pxe}.network \
+        "$systemdnetwork"/zz-default.network
+
+    # Don't keep the configuration, otherwise the IP address is not released.
+    # This can cause problems when a different DHCP client configuration is set
+    # on first boot. The DHCP server would not recognize the rootfs system and
+    # would therefore keep two addresses allocated.
+    sed -i -r 's:^(KeepConfiguration)=.*:\1=no:' \
+        "$initdir/$systemdnetwork"/{yy-pxe,zz-default}.network
 
     inst_simple "$moddir/network-cleanup.service" \
         "$systemdsystemunitdir/network-cleanup.service"
@@ -30,20 +39,11 @@ install() {
     inst_simple "$moddir/10-nodeps.conf" \
         "$systemdsystemunitdir/systemd-resolved.service.d/10-nodeps.conf"
 
-    inst_simple "$moddir/yy-azure-sriov.network" \
-        "$systemdnetwork/yy-azure-sriov.network"
-
     inst_simple "$moddir/yy-digitalocean.network" \
         "$systemdnetwork/yy-digitalocean.network"
 
     inst_simple "$moddir/yy-netroot.network" \
         "$systemdnetwork/yy-netroot.network"
-
-    inst_simple "$moddir/yy-pxe.network" \
-        "$systemdnetwork/yy-pxe.network"
-
-    inst_simple "$moddir/zz-default.network" \
-        "$systemdnetwork/zz-default.network"
 
     # add a hook to generate networkd configuration from ip= arguments
     inst_hook cmdline 99 "$moddir/parse-ip-for-networkd.sh"
