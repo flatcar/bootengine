@@ -5,16 +5,11 @@
 
 # called by dracut
 depends() {
-    echo net-lib systemd-networkd
+    echo net-lib systemd-networkd systemd-resolved
 }
 
 # called by dracut
 install() {
-    inst_multiple -o \
-        $systemdutildir/systemd-resolved \
-        $systemdsystemunitdir/systemd-resolved.service \
-        /etc/systemd/resolved.conf
-
     inst_multiple \
         "$systemdnetwork"/98-{gce-coreos-virtio,gce-virtio,virtio}.link \
         "$systemdnetwork"/yy-{azure-sriov{,-coreos},pxe}.network \
@@ -27,18 +22,6 @@ install() {
     sed -i -r 's:^(KeepConfiguration)=.*:\1=no:' \
         "$initdir/$systemdnetwork"/{yy-pxe,zz-default}.network
 
-    inst_simple "$moddir/network-cleanup.service" \
-        "$systemdsystemunitdir/network-cleanup.service"
-
-    inst_simple "$moddir/parse-ip-for-networkd.service" \
-        "$systemdsystemunitdir/parse-ip-for-networkd.service"
-
-    inst_simple "$moddir/afterburn-network-kargs.service" \
-        "$systemdsystemunitdir/afterburn-network-kargs.service"
-
-    inst_simple "$moddir/10-nodeps.conf" \
-        "$systemdsystemunitdir/systemd-resolved.service.d/10-nodeps.conf"
-
     inst_simple "$moddir/yy-digitalocean.network" \
         "$systemdnetwork/yy-digitalocean.network"
 
@@ -48,22 +31,24 @@ install() {
     inst_simple "$moddir/yy-netroot.network" \
         "$systemdnetwork/yy-netroot.network"
 
-    # add a hook to generate networkd configuration from ip= arguments
-    inst_hook cmdline 99 "$moddir/parse-ip-for-networkd.sh"
+    inst_simple "$moddir/network-cleanup.service" \
+        "$systemdsystemunitdir/network-cleanup.service"
 
-    # user/group required for systemd-resolved
-    getent passwd systemd-resolve >> "$initdir/etc/passwd"
-    getent group systemd-resolve >> "$initdir/etc/group"
+    inst_simple "$moddir/afterburn-network-kargs.service" \
+        "$systemdsystemunitdir/afterburn-network-kargs.service"
 
-    # point /etc/resolv.conf @ systemd-resolved's resolv.conf
-    ln -s ../run/systemd/resolve/resolv.conf "$initdir/etc/resolv.conf"
+    # Feed afterburn-injected kargs (in Dracut's cmdline.d) to
+    # systemd-network-generator, which only reads /proc/cmdline.
+    inst_simple "$moddir/systemd-network-generator-afterburn.conf" \
+        "$systemdsystemunitdir/systemd-network-generator.service.d/10-afterburn.conf"
 
-    # the systemd-networkd dracut module enables networkd by default, but
-    # we only want it when pulled in
-    systemctl --root "$initdir" disable systemd-networkd.service
-    systemctl --root "$initdir" disable systemd-networkd.socket
+    # The systemd-networkd and systemd-resolved Dracut modules enable their
+    # services by default, but we only want them when pulled in on demand.
+    systemctl --root "$initdir" disable systemd-networkd.{service,socket} systemd-resolved.service
+
+    # Disabling systemd-networkd also disables its generator because the former
+    # lists the latter in its [Install] Also=, so explicitly re-enable it.
+    systemctl --root "$initdir" enable systemd-network-generator.service
 
     systemctl --root "$initdir" enable network-cleanup.service
-    systemctl --root "$initdir" enable parse-ip-for-networkd.service
-    systemctl --root "$initdir" enable afterburn-network-kargs.service
 }
