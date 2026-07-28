@@ -10,6 +10,11 @@ PartOf=systemd-networkd.service
 # For extra safety
 ConditionKernelCommandLine=|coreos.oem.id=vmware
 ConditionKernelCommandLine=|flatcar.oem.id=vmware
+ConditionKernelCommandLine=|coreos.oem.id=proxmoxve
+ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
+ConditionKernelCommandLine=|coreos.oem.id=kubevirt
+ConditionKernelCommandLine=|flatcar.oem.id=kubevirt
+
 OnFailure=emergency.target
 OnFailureJobMode=replace-irreversibly
 

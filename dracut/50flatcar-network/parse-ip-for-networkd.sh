@@ -68,6 +68,8 @@ function mask2cidr() {
     echo $bits
 }
 
+nameserver=$(getarg nameserver=)
+
 # Check ip= lines
 # XXX Would be nice if we could errorcheck ip addresses here as well
 for p in $(getargs ip=); do
@@ -119,6 +121,7 @@ for p in $(getargs ip=); do
     mkdir -p /etc/systemd/network
     echo '[Match]' > $_net_file
     _dev=${dev:-"*"}; echo "Name=$_dev" >> $_net_file
+    echo "Type=!loopback" >> $_net_file
     echo '[Link]' >> $_net_file
     [ -n "$macaddr" ] && echo "MACAddress=$macaddr" >> $_net_file
     [ -n "$mtu" ] && echo "MTUBytes=$mtu" >> $_net_file
@@ -128,6 +131,7 @@ for p in $(getargs ip=); do
     [ -n "$gw" ] && echo "Gateway=$gw" >> $_net_file
     [ -n "$dns1" ] && echo "DNS=$dns1" >> $_net_file
     [ -n "$dns2" ] && echo "DNS=$dns2" >> $_net_file
+    [ -n "$nameserver" ] && echo "DNS=$nameserver" >> $_net_file
     echo '[Address]' >> $_net_file
     [ -n "$ip" ] && echo "Address=$ip/${cidr:-24}" >> $_net_file
     [ -n "$srv" ] && echo "Peer=$srv" >> $_net_file
