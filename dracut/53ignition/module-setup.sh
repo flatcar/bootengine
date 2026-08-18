@@ -98,7 +98,7 @@ install() {
     done
 
     # Flatcar: add ignition-quench.service, boot.mount,
-    # flatcar-afterburn-network.service, flatcar-static-network.service,
+    # flatcar-afterburn-network.service,
     # flatcar-metadata-hostname.service, flatcar-openstack-hostname.service
     inst_simple "$moddir/ignition-quench.service" \
         "$systemdsystemunitdir/ignition-quench.service"
@@ -106,8 +106,6 @@ install() {
         "$systemdsystemunitdir/boot.mount"
     inst_simple "$moddir/flatcar-afterburn-network.service" \
         "$systemdsystemunitdir/flatcar-afterburn-network.service"
-    inst_simple "$moddir/flatcar-static-network.service" \
-        "$systemdsystemunitdir/flatcar-static-network.service"
     inst_simple "$moddir/flatcar-metadata-hostname.service" \
         "$systemdsystemunitdir/flatcar-metadata-hostname.service"
     inst_simple "$moddir/flatcar-openstack-hostname.service" \
