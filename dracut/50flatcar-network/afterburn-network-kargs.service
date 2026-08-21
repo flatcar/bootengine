@@ -7,6 +7,9 @@ Before=dracut-cmdline.service
 # For extra safety
 ConditionKernelCommandLine=|coreos.oem.id=vmware
 ConditionKernelCommandLine=|flatcar.oem.id=vmware
+ConditionKernelCommandLine=|coreos.oem.id=proxmoxve
+ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
+
 OnFailure=emergency.target
 OnFailureJobMode=replace-irreversibly
 
