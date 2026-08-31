@@ -1,4 +1,7 @@
 [Match]
+# Only virtual NICs have a Kind, and we want to exclude those.
+Kind=!?*
+Type=!loopback
 KernelCommandLine=netroot
 
 [Network]

@@ -33,7 +33,6 @@ Requires=local-fs-pre.target
 Before=local-fs-pre.target
 Requires=ignition-setup-pre.service
 After=ignition-setup-pre.service
-RequiresMountsFor=/sysusr/usr/
 
 [Service]
 Type=oneshot

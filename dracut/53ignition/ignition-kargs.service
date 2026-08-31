@@ -17,7 +17,7 @@ Requires=local-fs-pre.target
 Before=local-fs-pre.target
 Requires=ignition-setup-pre.service
 After=ignition-setup-pre.service
-RequiresMountsFor=/sysusr/usr/ /oem/
+RequiresMountsFor=/oem/
 
 [Service]
 Type=oneshot

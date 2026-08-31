@@ -4,9 +4,6 @@ DefaultDependencies=false
 Before=initrd.target
 After=systemd-networkd.service initrd-root-fs.target
 Wants=systemd-networkd.service initrd-root-fs.target
-# Flatcar: Load coreos-metadata binary
-Requires=sysusr-usr.mount
-After=sysusr-usr.mount
 
 # Ensure Ignition can overwrite /etc/hostname
 Before=ignition-files.service
