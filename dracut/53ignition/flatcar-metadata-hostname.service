@@ -33,6 +33,7 @@ ConditionKernelCommandLine=|flatcar.oem.id=kubevirt
 ConditionKernelCommandLine=|flatcar.oem.id=proxmoxve
 ConditionKernelCommandLine=|flatcar.oem.id=scaleway
 ConditionKernelCommandLine=|flatcar.oem.id=oraclecloud
+ConditionKernelCommandLine=|flatcar.oem.id=outscale
 
 OnFailure=emergency.target
 OnFailureJobMode=replace-irreversibly
