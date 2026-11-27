@@ -56,6 +56,81 @@ loadmodules
 # Required to access disks, but not autoloaded:
 /sbin/modprobe sd_mod
 
+# Boot from an iSCSI volume (Oracle Cloud bare metal and other machines with an iBFT):
+# the firmware logged in to the iSCSI target and described the session in the iBFT, which
+# the kernel shows in /sys/firmware/ibft. Nothing else in this initrd logs in again, so
+# without this no disk appears. iscsistart and the NIC drivers are in this initrd for it.
+# Without an iBFT (a VM) this returns at once and the boot is unchanged.
+# iscsi_session_exists: a session is logged in (the firmware's own session is not in the kernel).
+iscsi_session_exists() {
+  local s
+  for s in /sys/class/iscsi_session/session*; do
+    if [ -e "${s}" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+iscsi_ibft_login() {
+  local mac target gateway dev d m
+  if [ ! -d /sys/firmware/ibft ]; then
+    return 0
+  fi
+  echo "iBFT found, logging in to the iSCSI target" >&2
+  # The NIC drivers are in /etc/ibft-modules and blacklisted for the coldplug, so that
+  # only a machine with an iBFT loads them here
+  for m in iscsi_tcp $(cat /etc/ibft-modules); do
+    /sbin/modprobe "${m}" || echo "WARNING: modprobe ${m} failed" >&2
+  done
+  mac=$(tr A-F a-f < /sys/firmware/ibft/ethernet0/mac)
+  target=$(cat /sys/firmware/ibft/target0/ip-addr)
+  gateway=$(cat /sys/firmware/ibft/ethernet0/gateway)
+  # The NIC driver was loaded above, but the NIC shows up some time later, under a name
+  # that is not predictable: find it by the MAC address of the iBFT.
+  dev=
+  for _ in $(seq 30); do
+    for d in /sys/class/net/*; do
+      if [ "$(cat "${d}/address" 2>/dev/null)" = "${mac}" ]; then
+        dev="${d##*/}"
+      fi
+    done
+    if [ "${dev}" != "" ]; then
+      break
+    fi
+    sleep 1
+  done
+  if [ "${dev}" = "" ]; then
+    # Carry on: the wait for the /usr partition below reports the missing disk
+    echo "ERROR: No NIC with the MAC address ${mac} of the iBFT" >&2
+    return 0
+  fi
+  # Bring up the NIC with the address of the iBFT
+  iscsistart -N >&2
+  # The target is often outside of the subnet of the NIC (a link-local address):
+  # reach it through the gateway of the iBFT.
+  if ! ip route get "${target}" > /dev/null 2>&1 && [ "${gateway}" != "" ] && [ "${gateway}" != 0.0.0.0 ]; then
+    ip route replace "${target}" via "${gateway}" dev "${dev}"
+  fi
+  # iscsistart keeps its database here, but this initrd has no /var and /run
+  mkdir -p /run/lock/iscsi
+  for d in nodes send_targets static isns ifaces fw; do
+    mkdir -p "/var/lib/iscsi/${d}"
+  done
+  # The first login can fail while the link of a slow NIC is still coming up. iscsistart
+  # exits with an error when any target of the iBFT fails, so look for the session.
+  for _ in 1 2 3; do
+    iscsistart -b >&2 || true
+    if iscsi_session_exists; then
+      return 0
+    fi
+    sleep 5
+  done
+  # Carry on: the wait for the /usr partition below reports the missing disk
+  echo "ERROR: iscsistart could not log in to the target ${target}" >&2
+}
+iscsi_ibft_login
+
 debug_sh 2/4: before verity
 
 find_drive() {
@@ -195,6 +270,14 @@ if [ "${usr}" = /usr.squashfs ]; then
   # Copy /oem (preferred) or /usr/share/oem (legacy) into the new root.
   cp -a /oem/. /realinit/oem || cp -a /usr/share/oem/. /realinit/oem || true
   mv /usr.squashfs /realinit
+fi
+# An iBFT alone does not mean an iSCSI boot (iPXE sanhook and NIC option ROMs publish one too)
+if iscsi_session_exists; then
+  # Tell the next stage that the root disk is on iSCSI. Dracut reads /etc/cmdline.d as well
+  # as the kernel command line, but systemd conditions only read the latter, so the
+  # units of dracut/52iscsi-ibft and network-cleanup.service test this file.
+  mkdir -p /realinit/etc/cmdline.d
+  echo "rd.iscsi.firmware=1 rd.neednet=1 netroot=iscsi:" > /realinit/etc/cmdline.d/90-ibft.conf
 fi
 debug_sh 4/4: before switch_root to /realinit
 killall mdev || true
