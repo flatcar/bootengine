@@ -1,0 +1,20 @@
+[Unit]
+Description=Prepare the iSCSI root disk for the real system
+DefaultDependencies=no
+# Written by minimal-init on a machine that booted from an iBFT
+ConditionPathExists=/etc/cmdline.d/90-ibft.conf
+RequiresMountsFor=/sysroot/usr/
+# After Ignition, to keep what it wrote for iSCSI or the network
+After=ignition-files.service initrd-setup-root-after-ignition.service
+# The network file of ibft-network, which this copies
+Wants=ibft-network.service
+After=ibft-network.service
+Before=initrd-parse-etc.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ibft-root-setup
+
+[Install]
+WantedBy=initrd.target

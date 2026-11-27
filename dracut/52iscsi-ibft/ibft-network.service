@@ -1,0 +1,14 @@
+[Unit]
+Description=Network configuration for the iSCSI root disk
+DefaultDependencies=no
+# Written by minimal-init on a machine that booted from an iBFT
+ConditionPathExists=/etc/cmdline.d/90-ibft.conf
+Before=systemd-networkd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ibft-network
+
+[Install]
+WantedBy=systemd-networkd.service

@@ -1,0 +1,43 @@
+#!/bin/bash
+# Prepare the real root (/sysroot) for an iSCSI root disk, before switch-root:
+# - the initiator name of the iBFT: the target only accepts that one, and
+#   iscsi-init.service would generate another;
+# - an iscsid.conf with a long replacement_timeout: the root disk waits for a lost
+#   connection to come back instead of failing I/O after 120 seconds;
+# - the network configuration of ibft-network, so that the running system keeps the
+#   address and routes of the root disk when networkd restarts;
+# - iscsid, so that the root session is recovered after a connection drop. Not
+#   iscsi.service, whose stop would log the root session out at shutdown.
+# Files that the real root already has are kept, so that a second boot, or an Ignition
+# config that sets them, is not overwritten.
+set -euo pipefail
+
+ibft=/sys/firmware/ibft
+iscsi_conf=/sysroot/etc/iscsi/iscsid.conf
+default_conf=/sysroot/usr/share/iscsi/iscsid.conf
+
+mkdir -p /sysroot/etc/iscsi /sysroot/etc/systemd/network \
+    /sysroot/etc/systemd/system/multi-user.target.wants \
+    /sysroot/etc/systemd/system/sockets.target.wants
+
+# iscsid first: it matters most, and nothing below may keep it from being enabled.
+ln -sf /usr/lib/systemd/system/iscsid.service /sysroot/etc/systemd/system/multi-user.target.wants/iscsid.service
+ln -sf /usr/lib/systemd/system/iscsid.socket /sysroot/etc/systemd/system/sockets.target.wants/iscsid.socket
+
+if [[ ! -e /sysroot/etc/iscsi/initiatorname.iscsi ]]; then
+    echo "InitiatorName=$(<"${ibft}/initiator/initiator-name")" > /sysroot/etc/iscsi/initiatorname.iscsi
+fi
+
+# Flatcar's default iscsid.conf is there on the first boot, as a file or a link
+# (it has the short timeout): replace that, but not one that somebody wrote.
+if [[ -L "${iscsi_conf}" ]] || { [[ -f "${iscsi_conf}" ]] && [[ "$(<"${iscsi_conf}")" == "$(<"${default_conf}")" ]]; }; then
+    rm -f "${iscsi_conf}"
+fi
+if [[ ! -e "${iscsi_conf}" ]]; then
+    sed 's/^node.session.timeo.replacement_timeout = .*/node.session.timeo.replacement_timeout = 6000/' \
+        "${default_conf}" > "${iscsi_conf}"
+fi
+
+if [[ ! -e /sysroot/etc/systemd/network/00-ibft.network && -e /etc/systemd/network/00-ibft.network ]]; then
+    cp /etc/systemd/network/00-ibft.network /sysroot/etc/systemd/network/00-ibft.network
+fi

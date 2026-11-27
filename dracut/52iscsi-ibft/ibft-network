@@ -1,0 +1,34 @@
+#!/bin/bash
+# Configure the NIC of the iSCSI root disk in this initrd, before systemd-networkd
+# starts. The NIC is the one of the iBFT, which the kernel shows in /sys/firmware/ibft.
+# minimal-init already gave it the address of the iBFT; this keeps that address and
+# the routes when networkd stops, restarts or loses the DHCP lease, because the root
+# disk is reached through them. ibft-root-setup hands the file to the real system.
+set -euo pipefail
+
+ibft=/sys/firmware/ibft
+mac=$(<"${ibft}/ethernet0/mac")
+target=$(<"${ibft}/target0/ip-addr")
+
+# minimal-init routed the target through the gateway of the iBFT when it is outside
+# the subnet of the NIC: keep that route. Nothing to keep when the target is on link.
+gateway=$(ip route get "${target}" 2>/dev/null | sed -n 's/.* via \([0-9.]*\) .*/\1/p' || true)
+
+mkdir -p /etc/systemd/network
+cat > /etc/systemd/network/00-ibft.network <<EOT
+[Match]
+MACAddress=${mac}
+
+[Network]
+DHCP=ipv4
+KeepConfiguration=yes
+IgnoreCarrierLoss=yes
+EOT
+if [[ -n "${gateway}" ]]; then
+    cat >> /etc/systemd/network/00-ibft.network <<EOT
+
+[Route]
+Destination=${target}/32
+Gateway=${gateway}
+EOT
+fi

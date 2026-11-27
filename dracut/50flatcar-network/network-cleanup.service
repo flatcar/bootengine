@@ -5,6 +5,9 @@ RefuseManualStart=true
 RefuseManualStop=true
 # If we're using a netroot, we can't tear down the network
 ConditionKernelCommandLine=!netroot
+# Same for an iSCSI root of the iBFT: minimal-init writes this file instead of adding
+# netroot to the kernel command line, which systemd conditions cannot see otherwise
+ConditionPathExists=!/etc/cmdline.d/90-ibft.conf
 
 PartOf=systemd-networkd.service
 Before=systemd-networkd.service initrd-switch-root.target
